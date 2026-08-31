@@ -22,13 +22,13 @@ interface NavMenuItem {
 }
 
 export const Sidebar: React.FC = () => {
-  const { currentPage, setCurrentPage, unreadAlertsCount } = useApp();
+  const { currentPage, setCurrentPage, unreadAlertsCount, currentRole } = useApp();
 
   const navItems: NavMenuItem[] = [
-    { id: 'dashboard', label: 'Overview', icon: <LayoutDashboard size={17} /> },
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={17} /> },
+    { id: 'workflow', label: 'Acquisition Window', icon: <GitBranch size={17} /> },
     { id: 'projects', label: 'Projects', icon: <FolderKanban size={17} /> },
     { id: 'gis-parcels', label: 'GIS & Land Parcels', icon: <MapPin size={17} /> },
-    { id: 'workflow', label: 'Acquisition Workflow', icon: <GitBranch size={17} /> },
     { id: 'compensation', label: 'Approved Projects', icon: <CheckCircle2 size={17} /> },
     { id: 'affected-families', label: 'Affected Families & R&R', icon: <Users size={17} /> },
     { id: 'documents', label: 'Documents', icon: <FileText size={17} /> },
@@ -59,7 +59,9 @@ export const Sidebar: React.FC = () => {
 
       {/* Nav Menu */}
       <nav className="sidebar-nav">
-        <div className="nav-section-title">Operations Portal</div>
+        <div className="nav-section-title">
+          {currentRole === 'Land Acquisition Officer' ? 'OFFICER PORTAL' : 'OPERATIONS PORTAL'}
+        </div>
         {navItems.map((item) => {
           const isActive =
             currentPage === item.id ||
@@ -87,10 +89,16 @@ export const Sidebar: React.FC = () => {
         onClick={() => setCurrentPage('administration')}
         title="View Officer Profile & Permissions"
       >
-        <div className="user-avatar">RH</div>
+        <div className="user-avatar">
+          {currentRole === 'Land Acquisition Officer' ? 'RH' : currentRole === 'Project Implementing Agency' ? 'IA' : 'CM'}
+        </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="user-info-name">Shri R. K. Hegde, KAS</div>
-          <div className="user-info-role">District Land Acquisition Officer</div>
+          <div className="user-info-name">
+            {currentRole === 'Land Acquisition Officer' ? 'Shri R. K. Hegde, KAS' : currentRole === 'Project Implementing Agency' ? 'KSHIP PIU Director' : 'Ministry Administrator'}
+          </div>
+          <div className="user-info-role">
+            {currentRole}
+          </div>
         </div>
       </div>
     </aside>

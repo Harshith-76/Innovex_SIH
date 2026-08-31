@@ -15,12 +15,7 @@ import {
 } from 'lucide-react';
 
 export const ProjectsPage: React.FC = () => {
-  const {
-    projects,
-    openProjectDetail,
-    openProjectRoute,
-    searchQuery: globalSearch
-  } = useApp();
+  const { projects, openProjectDetail, openProjectRoute, searchQuery: globalSearch, currentRole } = useApp();
 
   const [localSearch, setLocalSearch] = useState('');
   const [filterType, setFilterType] = useState('ALL');
@@ -57,19 +52,25 @@ export const ProjectsPage: React.FC = () => {
             Manage land acquisition projects, project scope, route alignment and acquisition progress.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button
             className="gov-btn gov-btn-secondary"
             onClick={() => alert('Exporting project directory in NIC Excel format...')}
           >
             <Download size={13} /> Export CSV
           </button>
-          <button
-            className="gov-btn gov-btn-primary"
-            onClick={() => setIsNewProjectModalOpen(true)}
-          >
-            <Plus size={14} /> REGISTER NEW PROJECT
-          </button>
+          {currentRole === 'Land Acquisition Officer' ? (
+            <div style={{ fontSize: '11px', color: '#b45309', backgroundColor: '#fef3c7', padding: '4px 10px', borderRadius: '4px', border: '1px solid #fcd34d' }} title="Project proposal creation is an Implementing Agency function. Switch Dev Role in top header to Agency mode to create proposals.">
+              Agency Creation Restricted (Officer View)
+            </div>
+          ) : (
+            <button
+              className="gov-btn gov-btn-primary"
+              onClick={() => setIsNewProjectModalOpen(true)}
+            >
+              <Plus size={14} /> REGISTER NEW PROJECT
+            </button>
+          )}
         </div>
       </div>
 

@@ -6,7 +6,8 @@ import {
   ChevronRight,
   Shield,
   Building2,
-  RefreshCw
+  RefreshCw,
+  UserCheck
 } from 'lucide-react';
 import { useApp, PageId, JurisdictionLevel } from '../../context/AppContext';
 import { NotificationDrawer } from '../common/NotificationDrawer';
@@ -17,7 +18,7 @@ const PAGE_NAMES: Record<PageId, string> = {
   'project-detail': 'Project Workspace',
   'project-route': 'Project Route & GIS Alignment',
   'gis-parcels': 'GIS & Land Parcels',
-  workflow: 'Acquisition Workflow',
+  workflow: 'Acquisition Window',
   compensation: 'Compensation Management',
   'affected-families': 'Affected Families & R&R',
   documents: 'Documents & Records Repository',
@@ -37,7 +38,9 @@ export const TopHeader: React.FC = () => {
     setSelectedJurisdictionName,
     searchQuery,
     setSearchQuery,
-    unreadAlertsCount
+    unreadAlertsCount,
+    currentRole,
+    setCurrentRole
   } = useApp();
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -103,6 +106,31 @@ export const TopHeader: React.FC = () => {
 
       {/* Jurisdiction & User Status */}
       <div className="header-right">
+        {/* Dev / Demo Role Switcher */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--gov-slate-50)', padding: '3px 8px', borderRadius: '4px', border: '1px solid var(--gov-slate-200)' }} title="Development Demo Role Switcher (Testing mechanism for officer vs agency workflows)">
+          <UserCheck size={14} color="var(--gov-slate-600)" />
+          <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gov-slate-600)', letterSpacing: '0.02em' }}>DEV ROLE:</span>
+          <select
+            className="gov-select"
+            style={{
+              padding: '2px 6px',
+              fontSize: '11px',
+              fontWeight: 600,
+              color: 'var(--gov-navy-900)',
+              backgroundColor: '#ffffff',
+              borderColor: 'var(--gov-slate-200)',
+              cursor: 'pointer'
+            }}
+            value={currentRole}
+            onChange={(e) => setCurrentRole(e.target.value as any)}
+          >
+            <option value="Land Acquisition Officer">Land Acquisition Officer (SLAO)</option>
+            <option value="Financial Officer / Finance Minister">Financial Officer / Finance Minister</option>
+            <option value="Project Implementing Agency">Project Implementing Agency (PIU/NHAI)</option>
+            <option value="Central Ministry">Central Ministry</option>
+          </select>
+        </div>
+
         {/* Jurisdiction Selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Building2 size={14} color="var(--gov-blue-700)" />
@@ -179,11 +207,11 @@ export const TopHeader: React.FC = () => {
               fontWeight: 700
             }}
           >
-            LA
+            {currentRole === 'Land Acquisition Officer' ? 'LA' : currentRole === 'Project Implementing Agency' ? 'IA' : 'CM'}
           </div>
           <div style={{ lineHeight: 1.1 }}>
             <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gov-navy-900)' }}>
-              LAO Ramanagara
+              {currentRole === 'Land Acquisition Officer' ? 'LAO Officer' : currentRole === 'Project Implementing Agency' ? 'PIA Director' : 'Ministry Admin'}
             </div>
             <div style={{ fontSize: '9.5px', color: 'var(--gov-slate-500)' }}>
               Online (SSL Secure)

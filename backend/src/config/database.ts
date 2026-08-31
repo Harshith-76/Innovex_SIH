@@ -9,6 +9,7 @@ const PROJECTS_COLLECTION = 'Project_Approval_LA';
 const HISSA_COLLECTION = 'hissa_records';
 const OWNERS_COLLECTION = 'owners';
 const APPROVED_PROJECTS_COLLECTION = 'Project_Approved_Project';
+const PROJECT_APPROVAL_LA_COLLECTION = 'Project_Approval_LA';
 
 /**
  * Establishes and caches the MongoDB Atlas connection.
@@ -101,6 +102,13 @@ export function getHissaCollection<T extends Document = Document>(): Collection<
  */
 export function getOwnersCollection<T extends Document = Document>(): Collection<T> {
   return getDb().collection<T>(OWNERS_COLLECTION);
+}
+
+/**
+ * Returns the typed Project_Approval_LA collection from the active database.
+ */
+export function getProjectApprovalLACollection<T extends Document = Document>(): Collection<T> {
+  return getDb().collection<T>(PROJECT_APPROVAL_LA_COLLECTION);
 }
 
 /**

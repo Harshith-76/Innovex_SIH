@@ -142,3 +142,48 @@ export async function approveProject(req: Request, res: Response, next: NextFunc
   }
 }
 
+/**
+ * POST /api/projects/:id/approve-la
+ * Explicit endpoint for Land Acquisition Minister approval.
+ * Updates project status to FORWARDED_TO_FINANCIAL_OFFICER and saves full snapshot to lams_db.Project_Approval_LA.
+ */
+export async function approveProjectLA(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const body = req.body;
+
+    if (!id || !id.trim()) {
+      res.status(400).json({ error: 'Project ID parameter is required.' });
+      return;
+    }
+
+    // Update main project status
+    await projectService.updateProject(id, {
+      status: 'FORWARDED_TO_FINANCIAL_OFFICER',
+      verification: body
+    });
+
+    // Create/update full snapshot in Project_Approval_LA
+    const snapshot = await projectService.saveProjectApprovalLA(id, body);
+
+    res.status(200).json({
+      message: 'Project successfully approved by Land Acquisition Minister and forwarded to Financial Officer.',
+      approvalSnapshot: snapshot
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /api/projects/approved-la
+ * Fetches all approved project records stored in lams_db.Project_Approval_LA for the Finance Minister.
+ */
+export async function getApprovedProjectsLA(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const approvedProjects = await projectService.getApprovedProjectsLA();
+    res.status(200).json(approvedProjects);
+  } catch (error) {
+    next(error);
+  }
+}
