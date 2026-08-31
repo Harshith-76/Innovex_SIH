@@ -155,3 +155,23 @@ export async function createProject(data: CreateProjectRequest): Promise<any> {
 
   return response.json();
 }
+
+/**
+ * Updates an existing project in MongoDB API.
+ */
+export async function updateProject(id: string, data: Record<string, any>): Promise<any> {
+  const response = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(id.trim())}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.error || `Failed to update project: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}

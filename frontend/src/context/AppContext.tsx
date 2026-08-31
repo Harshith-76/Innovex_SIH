@@ -23,7 +23,7 @@ import {
   INITIAL_ADMIN_USERS
 } from '../data/mockData';
 
-import { fetchParcels, fetchProjects, createProject, ParcelQueryParams, CreateProjectRequest } from '../services/api';
+import { fetchParcels, fetchProjects, createProject, updateProject as updateProjectApi, ParcelQueryParams, CreateProjectRequest } from '../services/api';
 import { featureCollectionToLandParcels } from '../utils/geoAdapter';
 
 export type PageId =
@@ -169,6 +169,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           totalCompensationPaidCr: 0,
           lastUpdated: p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('en-IN') : 'Just now',
           description: p.description || p.scope || '',
+          selectedParcelIds: Array.isArray(p.selectedParcelIds) ? p.selectedParcelIds : [],
+          routeWaypoints: p.routeWaypoints || undefined,
+          proposedLengthKm: p.proposedLengthKm || p.routeLengthKm || undefined,
+          routeLengthKm: p.routeLengthKm || p.proposedLengthKm || undefined,
+          rowWidthM: p.rowWidthM || undefined,
+          routeStatus: p.routeStatus || undefined,
           stages: [
             { stage: 'Proposal', status: 'In Progress', targetDate: '2026-10-31', responsibleAuthority: p.agencyName || 'PIU Director', documentsCount: 1, pendingActionsCount: 1, notes: 'Land selection completed' },
             { stage: 'Verification', status: 'Pending', targetDate: '2026-12-31', responsibleAuthority: 'SLAO', documentsCount: 0, pendingActionsCount: 2, notes: 'JMS pending' }
@@ -225,6 +231,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       totalCompensationPaidCr: 0,
       lastUpdated: 'Just now (Saved in MongoDB)',
       description: created.description || created.scope || '',
+      selectedParcelIds: created.selectedParcelIds || projectData.selectedParcelIds || [],
       stages: [
         { stage: 'Proposal', status: 'In Progress', targetDate: '2026-10-31', responsibleAuthority: created.agencyName || 'PIU Director', documentsCount: 1, pendingActionsCount: 1, notes: 'Land selection registered' },
         { stage: 'Verification', status: 'Pending', targetDate: '2026-12-31', responsibleAuthority: 'SLAO', documentsCount: 0, pendingActionsCount: 2, notes: 'JMS pending' }
@@ -259,7 +266,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentPage('project-route');
   };
 
-  const updateProjectRoute = (projectId: string, routeData: Partial<LandAcquisitionProject>) => {
+  const updateProjectRoute = async (projectId: string, routeData: Partial<LandAcquisitionProject>) => {
     setProjects(prev =>
       prev.map(p => {
         if (p.id === projectId) {
@@ -272,6 +279,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return p;
       })
     );
+
+    try {
+      await updateProjectApi(projectId, routeData);
+    } catch (err) {
+      console.warn('[AppContext] Could not persist route update to API:', err);
+    }
   };
 
   const navigateToParcelInGis = (parcelId: string) => {

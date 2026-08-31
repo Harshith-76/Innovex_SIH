@@ -275,18 +275,43 @@ export const ProjectRouteMap: React.FC<ProjectRouteMapProps> = ({
       waypointMarkersRef.current.push(marker);
     });
 
-    // Auto-fit bounds on initial load if route exists
-    if (waypoints.length >= 2 && !isDrawMode) {
+    // Auto-fit bounds on initial load if route exists or if project parcels exist
+    if (!isDrawMode) {
       try {
-        const bounds = L.latLngBounds(waypoints);
-        if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+        if (waypoints.length >= 2) {
+          const bounds = L.latLngBounds(waypoints);
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+          }
+        } else if (parcels.length > 0) {
+          const allCoords: [number, number][] = [];
+          parcels.forEach(p => {
+            if (Array.isArray(p.coordinates)) {
+              if (typeof p.coordinates[0]?.[0] === 'number') {
+                allCoords.push(p.coordinates as any);
+              } else if (Array.isArray(p.coordinates[0])) {
+                (p.coordinates as any).forEach((ring: any) => {
+                  if (Array.isArray(ring)) {
+                    ring.forEach((pt: any) => {
+                      if (Array.isArray(pt) && pt.length >= 2) allCoords.push([pt[0], pt[1]]);
+                    });
+                  }
+                });
+              }
+            }
+          });
+          if (allCoords.length > 0) {
+            const bounds = L.latLngBounds(allCoords);
+            if (bounds.isValid()) {
+              map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+            }
+          }
         }
       } catch (err) {
         // ignore
       }
     }
-  }, [waypoints, rowWidthM, isDrawMode]);
+  }, [waypoints, rowWidthM, isDrawMode, parcels]);
 
   // Render Cadastral Parcels and Highlight Intersecting Ones
   useEffect(() => {
@@ -303,13 +328,13 @@ export const ProjectRouteMap: React.FC<ProjectRouteMapProps> = ({
       const isAffected = affectedIds.has(parcel.parcelId);
       const isSelected = parcel.parcelId === selectedParcelId;
 
-      let color = isSelected ? '#1d4ed8' : isAffected ? '#eab308' : '#64748b';
-      let fillColor = isSelected ? '#3b82f6' : isAffected ? '#fde047' : '#94a3b8';
-      let fillOpacity = isSelected ? 0.65 : isAffected ? 0.55 : 0.25;
+      let color = isSelected ? '#1d4ed8' : isAffected ? '#eab308' : '#059669';
+      let fillColor = isSelected ? '#3b82f6' : isAffected ? '#fde047' : '#10b981';
+      let fillOpacity = isSelected ? 0.65 : isAffected ? 0.55 : 0.40;
 
       const polygon = L.polygon(parcel.coordinates as any, {
         color,
-        weight: isSelected ? 4 : isAffected ? 3 : 1.5,
+        weight: isSelected ? 4 : isAffected ? 3 : 2.5,
         fillColor,
         fillOpacity,
         dashArray: isAffected ? '4, 4' : undefined
@@ -318,9 +343,9 @@ export const ProjectRouteMap: React.FC<ProjectRouteMapProps> = ({
       polygon.bindTooltip(
         `
         <div style="font-size: 11px; padding: 2px;">
-          <div style="font-weight: 700; color: #0f172a;">Sy. No. ${parcel.surveyNumber} (${parcel.village})</div>
-          <div style="color: #475569;">${parcel.areaAcres} Acres · ${parcel.landType}</div>
-          ${isAffected ? '<div style="color: #b45309; font-weight: 700; margin-top: 2px;">⚠️ Within Proposed ROW Corridor</div>' : ''}
+          <div style="font-weight: 700; color: #0f172a;">Selected Land: Sy. No. ${parcel.surveyNumber} (${parcel.village})</div>
+          <div style="color: #047857; font-weight: 600;">${parcel.areaAcres} Acres · ${parcel.landType}</div>
+          ${isAffected ? '<div style="color: #b45309; font-weight: 700; margin-top: 2px;">⚠️ Within Proposed ROW Corridor</div>' : '<div style="color: #059669; font-weight: 600; margin-top: 2px;">✓ Selected Project Land Area</div>'}
         </div>
         `,
         { direction: 'center' }

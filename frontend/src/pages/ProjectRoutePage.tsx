@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { ProjectRouteMap, calculateTotalRouteLengthKm } from '../components/gis/ProjectRouteMap';
 import { LandParcel } from '../types';
+import { fetchParcels } from '../services/api';
+import { featureCollectionToLandParcels } from '../utils/geoAdapter';
 import { StatusBadge } from '../components/common/StatusBadge';
 import {
   Route,
@@ -51,6 +53,7 @@ export const ProjectRoutePage: React.FC = () => {
   const [isDrawMode, setIsDrawMode] = useState<boolean>(false);
   const [affectedParcels, setAffectedParcels] = useState<LandParcel[]>([]);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
+  const [projectParcels, setProjectParcels] = useState<LandParcel[]>([]);
 
   // Keep state synced if activeProject changes
   useEffect(() => {
@@ -66,6 +69,49 @@ export const ProjectRoutePage: React.FC = () => {
       }
     }
   }, [activeProject]);
+
+  // Load exact parcels for activeProject from MongoDB parcel API
+  useEffect(() => {
+    if (!activeProject) return;
+
+    let cancelled = false;
+
+    const loadParcelsForProject = async () => {
+      try {
+        const fc = await fetchParcels({
+          district: activeProject.district
+        });
+        const adapted = featureCollectionToLandParcels(fc);
+
+        if (cancelled) return;
+
+        if (activeProject.selectedParcelIds && activeProject.selectedParcelIds.length > 0) {
+          const selectedSet = new Set(activeProject.selectedParcelIds);
+          const matched = adapted.filter(p => selectedSet.has(p.parcelId));
+          setProjectParcels(matched.length > 0 ? matched : adapted);
+        } else {
+          setProjectParcels(adapted);
+        }
+      } catch (err) {
+        console.warn('[ProjectRoutePage] Could not load district parcels from API:', err);
+        if (!cancelled) {
+          if (activeProject.selectedParcelIds && activeProject.selectedParcelIds.length > 0) {
+            const selectedSet = new Set(activeProject.selectedParcelIds);
+            const matched = parcels.filter(p => selectedSet.has(p.parcelId));
+            setProjectParcels(matched.length > 0 ? matched : parcels);
+          } else {
+            setProjectParcels(parcels);
+          }
+        }
+      }
+    };
+
+    void loadParcelsForProject();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProject, parcels]);
 
   // Empty State if no project is selected
   if (!activeProject) {
@@ -101,8 +147,10 @@ export const ProjectRoutePage: React.FC = () => {
     updateProjectRoute(activeProject.id, {
       routeWaypoints: waypoints,
       proposedLengthKm: calculatedLengthKm,
+      routeLengthKm: calculatedLengthKm,
       rowWidthM,
-      routeStatus
+      routeStatus,
+      selectedParcelIds: activeProject.selectedParcelIds
     });
 
     setIsDrawMode(false);
@@ -307,7 +355,7 @@ export const ProjectRoutePage: React.FC = () => {
           rowWidthM={rowWidthM}
           isDrawMode={isDrawMode}
           onToggleDrawMode={setIsDrawMode}
-          parcels={parcels}
+          parcels={projectParcels.length > 0 ? projectParcels : parcels}
           selectedParcelId={selectedParcelId}
           onSelectParcel={setSelectedParcelId}
           onAffectedParcelsCalculated={setAffectedParcels}
