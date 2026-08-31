@@ -1,7 +1,17 @@
 import 'dotenv/config';
+import dns from 'dns';
 import http from 'http';
 import app from './app.js';
 import { connectToDatabase, closeDatabaseConnection } from './config/database.js';
+
+// ── DNS FIX ──────────────────────────────────────────────────────────────────
+// Node.js on Windows defaults to 127.0.0.1 as its DNS resolver even when
+// nothing is actually listening on loopback port 53. This causes an immediate
+// ECONNREFUSED when the MongoDB driver tries to resolve the mongodb+srv://
+// SRV record. Override to real DNS servers before any network activity.
+dns.setDefaultResultOrder('ipv4first');
+dns.setServers(['8.8.8.8', '8.8.4.4', '172.16.1.1']);
+// ─────────────────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 5000;
 
