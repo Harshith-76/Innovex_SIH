@@ -4,6 +4,7 @@ import parcelRoutes from './routes/parcelRoutes.js';
 import projectRoutes from './routes/projectRoutes.js';
 import hissaRoutes from './routes/hissaRoutes.js';
 import districtMonitoringRoutes from './routes/districtMonitoringRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use(
 app.use(express.json());
 
 // Mount API routes under /api
+app.use('/api', authRoutes);
 app.use('/api', parcelRoutes);
 app.use('/api', projectRoutes);
 app.use('/api', hissaRoutes);

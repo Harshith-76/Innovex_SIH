@@ -11,8 +11,7 @@ import {
   AdminUser,
   ParcelStatus,
   CompensationStatus,
-  HissaRecord,
-  UserRole
+  HissaRecord
 } from '../types';
 import {
   INITIAL_PROJECTS,
@@ -34,31 +33,38 @@ import {
   fetchApprovedProjectsLA,
   approveProjectLA,
   ParcelQueryParams,
-  CreateProjectRequest
+  CreateProjectRequest,
+  loginUser,
+  logoutUser,
+  fetchCurrentUser,
+  getAuthToken,
+  clearAuthToken
 } from '../services/api';
 import { featureCollectionToLandParcels } from '../utils/geoAdapter';
+import {
+  canAccessPage,
+  firstAuthorizedPage,
+  hasPermission,
+  pageFromPath,
+  PAGE_PATHS,
+  type AuthenticatedUser,
+  type AuthRole,
+  type PageId,
+  type Permission
+} from '../auth/rbac';
 
-export type PageId =
-  | 'dashboard'
-  | 'district-dashboard'
-  | 'projects'
-  | 'project-detail'
-  | 'project-route'
-  | 'gis-parcels'
-  | 'workflow'
-  | 'compensation'
-  | 'affected-families'
-  | 'documents'
-  | 'alerts'
-  | 'analytics'
-  | 'district-monitoring'
-  | 'administration';
+export type { PageId } from '../auth/rbac';
 
 export type JurisdictionLevel = 'National' | 'State' | 'District' | 'Project';
 
 interface AppContextType {
-  currentRole: UserRole;
-  setCurrentRole: (role: UserRole) => void;
+  currentUser: AuthenticatedUser | null;
+  currentRole: AuthRole;
+  authLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  canAccess: (page: PageId) => boolean;
+  canPerform: (permission: Permission) => boolean;
   currentPage: PageId;
   setCurrentPage: (page: PageId) => void;
   selectedProjectId: string;
@@ -119,8 +125,9 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentRole, setCurrentRole] = useState<UserRole>('Land Acquisition Officer');
-  const [currentPage, setCurrentPage] = useState<PageId>('dashboard');
+  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [currentPage, setCurrentPageState] = useState<PageId>('access-denied');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('proj-001');
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
   const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(null);
@@ -145,11 +152,85 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [adminRoles, setAdminRoles] = useState<AdminRoleConfig[]>(INITIAL_ADMIN_ROLES);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>(INITIAL_ADMIN_USERS);
 
+  const currentRole: AuthRole = currentUser?.role || 'user';
+  const canAccess = (page: PageId) => canAccessPage(currentUser?.role, page);
+  const canPerform = (permission: Permission) => hasPermission(currentUser?.role, permission);
+
+  const activateUser = (user: AuthenticatedUser) => {
+    setCurrentUser(user);
+    const requestedPage = pageFromPath(window.location.pathname);
+    const nextPage = requestedPage && canAccessPage(user.role, requestedPage)
+      ? requestedPage
+      : requestedPage
+        ? 'access-denied'
+        : firstAuthorizedPage(user.role);
+    setCurrentPageState(nextPage);
+    window.history.replaceState({}, '', PAGE_PATHS[nextPage]);
+  };
+
+  const setCurrentPage = (page: PageId) => {
+    const nextPage = canAccessPage(currentUser?.role, page) ? page : 'access-denied';
+    setCurrentPageState(nextPage);
+    window.history.pushState({}, '', PAGE_PATHS[nextPage]);
+  };
+
+  const login = async (email: string, password: string) => {
+    const session = await loginUser(email, password);
+    activateUser(session.user);
+  };
+
+  const logout = async () => {
+    try {
+      await logoutUser();
+    } finally {
+      clearAuthToken();
+      setCurrentUser(null);
+      setCurrentPageState('access-denied');
+      window.history.replaceState({}, '', '/login');
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+    const restoreSession = async () => {
+      if (!getAuthToken()) {
+        setAuthLoading(false);
+        return;
+      }
+      try {
+        const user = await fetchCurrentUser();
+        if (active) activateUser(user);
+      } catch {
+        clearAuthToken();
+      } finally {
+        if (active) setAuthLoading(false);
+      }
+    };
+    const expireSession = () => {
+      setCurrentUser(null);
+      setCurrentPageState('access-denied');
+      window.history.replaceState({}, '', '/login');
+    };
+    const handlePopState = () => {
+      const page = pageFromPath(window.location.pathname);
+      setCurrentPageState(page && canAccessPage(currentUser?.role, page) ? page : 'access-denied');
+    };
+    restoreSession();
+    window.addEventListener('lams:auth-expired', expireSession);
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      active = false;
+      window.removeEventListener('lams:auth-expired', expireSession);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [currentUser?.role]);
+
   const getHissaByParcelId = (parcelId: string): HissaRecord[] => {
     return hissaByParcel[parcelId] || [];
   };
 
   const reloadParcels = async (params?: ParcelQueryParams) => {
+    if (!hasPermission(currentUser?.role, 'gis_land_parcels')) return;
     setIsParcelsLoading(true);
     setParcelsError(null);
     try {
@@ -279,19 +360,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
-    reloadParcels();
-    loadProjectsFromApi();
-    loadApprovedProjectsLA();
+    if (!currentUser) return;
+    if (hasPermission(currentUser.role, 'gis_land_parcels')) reloadParcels();
+    if (hasPermission(currentUser.role, 'projects_directory')) loadProjectsFromApi();
+    if (hasPermission(currentUser.role, 'approved_projects')) loadApprovedProjectsLA();
 
     const intervalId = setInterval(() => {
-      loadProjectsFromApi();
-      loadApprovedProjectsLA();
+      if (hasPermission(currentUser.role, 'projects_directory')) loadProjectsFromApi();
+      if (hasPermission(currentUser.role, 'approved_projects')) loadApprovedProjectsLA();
     }, 8000); // Poll every 8s for new proposal arrivals & approvals
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [currentUser?.user_id]);
 
   const createProjectRecord = async (projectData: CreateProjectRequest): Promise<LandAcquisitionProject> => {
+    if (!canPerform('project_create')) throw new Error('You do not have permission to create projects.');
     const created = await createProject(projectData);
     const mongoId = created._id || created.id;
 
@@ -360,6 +443,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateProjectRoute = async (projectId: string, routeData: Partial<LandAcquisitionProject>) => {
+    if (!canPerform('project_update')) throw new Error('You do not have permission to update this project.');
     setProjects(prev =>
       prev.map(p => {
         if (p.id === projectId) {
@@ -381,6 +465,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateProjectVerification = async (projectId: string, updates: Partial<LandAcquisitionProject>) => {
+    if (!canPerform('acquisition_review')) throw new Error('You do not have permission to review acquisition decisions.');
     setProjects(prev =>
       prev.map(p => {
         if (p.id === projectId) {
@@ -585,8 +670,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateProjectRoute,
         updateProjectVerification,
         navigateToParcelInGis,
+        currentUser,
         currentRole,
-        setCurrentRole
+        authLoading,
+        login,
+        logout,
+        canAccess,
+        canPerform
       }}
     >
       {children}

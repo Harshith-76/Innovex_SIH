@@ -69,7 +69,9 @@ export async function getProjectById(req: Request, res: Response, next: NextFunc
 export async function verifyProject(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const { officerName, officerDistrict, officerRole, remarks } = req.body || {};
+    const { officerDistrict, remarks } = req.body || {};
+    const officerName = req.authUser?.name;
+    const officerRole = 'District Officer';
 
     if (!id || !id.trim()) {
       res.status(400).json({ error: 'Project ID parameter is required.' });
@@ -100,7 +102,9 @@ export async function verifyProject(req: Request, res: Response, next: NextFunct
 export async function rejectProject(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const { reason, justification, officerName, officerDistrict, officerRole } = req.body || {};
+    const { reason, justification, officerDistrict } = req.body || {};
+    const officerName = req.authUser?.name;
+    const officerRole = 'District Officer';
 
     if (!id || !id.trim()) {
       res.status(400).json({ error: 'Project ID parameter is required.' });

@@ -11,28 +11,12 @@ import {
 } from 'lucide-react';
 
 const FinancialProjectDetails: React.FC<{ project: LandAcquisitionProject, onBack: () => void }> = ({ project, onBack }) => {
-  const { parcels, compensationRecords, documents, getHissaByParcelId } = useApp();
+  const { parcels, compensationRecords, documents, getHissaByParcelId, canPerform } = useApp();
   
   const originalMapParcels = parcels.filter(p => p.projectId === project.id);
   
-  // Ensure exactly 7 landowners as requested for calculation/table
-  const projectParcels = Array.from({ length: 7 }).map((_, index) => {
-    return {
-      parcelId: `${project.id}-parcel-${index + 1}`,
-      projectId: project.id,
-      surveyNumber: `SY-${100 + index}`,
-      ownerName: `Landowner ${index + 1}`,
-      areaAcres: Number((Math.random() * 5 + 1).toFixed(2)),
-      village: project.taluks?.[0] || 'Sample Village',
-      taluk: project.taluks?.[0] || 'Sample Taluk',
-      district: project.district || 'Sample District',
-      marketRatePerAcre: 500000 + (index * 50000),
-      hasHissa: false,
-      hissaRecords: [],
-      acquisitionStatus: 'Pending',
-      compensationStatus: 'Pending'
-    };
-  }) as any[];
+  // Financial review uses only the existing K-GIS parcel and resolved owner data.
+  const projectParcels = originalMapParcels;
   const projectDocs = documents.filter(d => d.projectId === project.id);
   const projectComp = compensationRecords.filter(c => c.projectId === project.id);
   
@@ -47,6 +31,7 @@ const FinancialProjectDetails: React.FC<{ project: LandAcquisitionProject, onBac
   const [selectedOwnerForCalc, setSelectedOwnerForCalc] = useState<any>(null);
 
   const handleCalculateAll = () => {
+    if (!canPerform('financial_approval')) return;
     // Demonstration calculation
     const calculated = projectParcels.map(p => {
       const rate = p.marketRatePerAcre || 500000;
@@ -69,6 +54,7 @@ const FinancialProjectDetails: React.FC<{ project: LandAcquisitionProject, onBac
   };
 
   const handleApprove = async () => {
+    if (!canPerform('financial_approval')) return;
     setIsApproving(true);
     try {
       await approveProjectApi(project.id);
@@ -214,7 +200,7 @@ const FinancialProjectDetails: React.FC<{ project: LandAcquisitionProject, onBac
       </div>
 
       {/* Automatic Compensation Calculation */}
-      <div className="gov-card" style={{ marginBottom: '16px', backgroundColor: 'var(--gov-blue-50)', border: '1px solid var(--gov-blue-100)' }}>
+      {canPerform('financial_approval') && <div className="gov-card" style={{ marginBottom: '16px', backgroundColor: 'var(--gov-blue-50)', border: '1px solid var(--gov-blue-100)' }}>
         <div className="gov-card-title" style={{ marginBottom: '12px', color: 'var(--gov-blue-800)' }}><IndianRupee size={16}/> Automatic Compensation Calculation</div>
         <p style={{ fontSize: '12px', color: 'var(--gov-blue-700)', marginBottom: '12px' }}>
           The system will calculate compensation for all affected landowners using the available land/project information and rules.
@@ -222,7 +208,7 @@ const FinancialProjectDetails: React.FC<{ project: LandAcquisitionProject, onBac
         <button className="gov-btn gov-btn-primary" onClick={handleCalculateAll}>
           Calculate Compensation for All
         </button>
-      </div>
+      </div>}
 
       {/* Beneficiaries List */}
       {isCalculated && (
@@ -285,14 +271,14 @@ const FinancialProjectDetails: React.FC<{ project: LandAcquisitionProject, onBac
       </div>
 
       {/* Approve / Reject Actions */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+      {canPerform('financial_approval') && <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
         <button className="gov-btn gov-btn-secondary" style={{ backgroundColor: 'var(--gov-red-50)', color: 'var(--gov-red-700)', borderColor: 'var(--gov-red-200)' }} onClick={() => setIsRejectModalOpen(true)}>
            <XCircle size={14} /> Reject
         </button>
         <button className="gov-btn gov-btn-primary" style={{ backgroundColor: 'var(--gov-green-600)' }} onClick={() => setIsApproveModalOpen(true)}>
            <CheckCircle2 size={14} /> Approve
         </button>
-      </div>
+      </div>}
 
       {/* Individual Details Modal (for Calculation Breakdown) */}
       {selectedOwnerForCalc && (
@@ -380,22 +366,53 @@ const FinancialProjectDetails: React.FC<{ project: LandAcquisitionProject, onBac
 
 export const CompensationPage: React.FC = () => {
   const {
-    projects,
+    approvedProjectsLA,
     searchQuery: globalSearch,
   } = useApp();
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [localSearch, setLocalSearch] = useState<string>('');
   
-  // Take all projects from the database collection (Project_Approval_LA) and show them
-  const approvedProjects = projects.filter((p) => !p.id.startsWith('proj-'));
+  const approvedProjects: LandAcquisitionProject[] = approvedProjectsLA.map((p) => ({
+    id: p.sourceProjectId || p.id,
+    name: p.projectName,
+    code: p.projectCode,
+    department: p.department || '',
+    implementingAgency: p.implementingAgency || p.agencyName || '',
+    agencyName: p.agencyName,
+    agencyType: p.agencyType,
+    projectType: p.projectType,
+    parentAuthority: p.parentAuthority,
+    state: p.state || 'Karnataka',
+    district: p.district || '',
+    taluks: Array.isArray(p.taluks) ? p.taluks : [],
+    villagesCount: Array.isArray(p.villages) ? p.villages.length : 0,
+    landRequiredAcres: Number(p.landRequiredAcres || 0),
+    landAcquiredAcres: Number(p.landAcquiredAcres || 0),
+    progressPercentage: Number(p.progressPercentage || 0),
+    currentStage: p.currentStage || 'Approval',
+    status: p.status || 'Approved',
+    riskScore: Number(p.riskScore || 0),
+    riskLevel: p.riskLevel || 'Low',
+    primaryRiskFactor: p.primaryRiskFactor || '',
+    expectedDelayDays: Number(p.expectedDelayDays || 0),
+    affectedFamiliesCount: Number(p.affectedFamiliesCount || 0),
+    displacedFamiliesCount: Number(p.displacedFamiliesCount || 0),
+    totalCompensationAssessedCr: Number(p.totalCompensationAssessedCr || p.estimatedCompensationCr || 0),
+    totalCompensationPaidCr: Number(p.totalCompensationPaidCr || 0),
+    lastUpdated: p.updatedAt || p.approvedAt || '',
+    description: p.description || p.scope || '',
+    stages: Array.isArray(p.stages) ? p.stages : [],
+    villages: Array.isArray(p.villages) ? p.villages : [],
+    selectedParcelIds: Array.isArray(p.selectedParcelIds) ? p.selectedParcelIds : [],
+  }));
 
   const searchKeyword = (localSearch || globalSearch).toLowerCase().trim();
   const filteredProjects = approvedProjects.filter((p) => 
     !searchKeyword || p.name.toLowerCase().includes(searchKeyword) || p.code.toLowerCase().includes(searchKeyword)
   );
 
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const selectedProject = approvedProjects.find(p => p.id === selectedProjectId);
 
   if (selectedProject) {
     return <FinancialProjectDetails project={selectedProject} onBack={() => setSelectedProjectId(null)} />;
