@@ -5,9 +5,10 @@ let db: Db | null = null;
 
 const DB_NAME = process.env.DB_NAME || 'lams_db';
 const PARCELS_COLLECTION = 'parcels';
-const PROJECTS_COLLECTION = 'projects';
+const PROJECTS_COLLECTION = 'Project_Approval_LA';
 const HISSA_COLLECTION = 'hissa_records';
 const OWNERS_COLLECTION = 'owners';
+const APPROVED_PROJECTS_COLLECTION = 'Project_Approved_Project';
 const PROJECT_APPROVAL_LA_COLLECTION = 'Project_Approval_LA';
 
 /**
@@ -80,6 +81,13 @@ export function getParcelsCollection<T extends Document = Document>(): Collectio
  */
 export function getProjectsCollection<T extends Document = Document>(): Collection<T> {
   return getDb().collection<T>(PROJECTS_COLLECTION);
+}
+
+/**
+ * Returns the typed approved projects collection from the active database.
+ */
+export function getApprovedProjectsCollection<T extends Document = Document>(): Collection<T> {
+  return getDb().collection<T>(APPROVED_PROJECTS_COLLECTION);
 }
 
 /**

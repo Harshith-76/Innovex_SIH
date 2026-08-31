@@ -9,7 +9,8 @@ import {
   FileText,
   BellRing,
   BarChart3,
-  ShieldCheck
+  ShieldCheck,
+  CheckCircle2
 } from 'lucide-react';
 import { useApp, PageId } from '../../context/AppContext';
 
@@ -28,7 +29,7 @@ export const Sidebar: React.FC = () => {
     { id: 'workflow', label: 'Acquisition Window', icon: <GitBranch size={17} /> },
     { id: 'projects', label: 'Projects', icon: <FolderKanban size={17} /> },
     { id: 'gis-parcels', label: 'GIS & Land Parcels', icon: <MapPin size={17} /> },
-    { id: 'compensation', label: 'Compensation', icon: <IndianRupee size={17} /> },
+    { id: 'compensation', label: 'Approved Projects', icon: <CheckCircle2 size={17} /> },
     { id: 'affected-families', label: 'Affected Families & R&R', icon: <Users size={17} /> },
     { id: 'documents', label: 'Documents', icon: <FileText size={17} /> },
     {

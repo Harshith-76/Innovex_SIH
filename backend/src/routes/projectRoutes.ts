@@ -4,6 +4,7 @@ import {
   getProjectById,
   createProject,
   updateProject,
+  approveProject,
   approveProjectLA,
   getApprovedProjectsLA
 } from '../controllers/projectController.js';
@@ -18,5 +19,6 @@ router.post('/projects/:id/approve-la', approveProjectLA);
 router.get('/projects/:id', getProjectById);
 router.patch('/projects/:id', updateProject);
 router.put('/projects/:id', updateProject);
+router.post('/projects/:id/approve', approveProject);
 
 export default router;
