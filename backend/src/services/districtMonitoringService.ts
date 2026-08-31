@@ -315,9 +315,9 @@ export async function verifyDistrictProject(
     }
   }
 
-  const officer = officerName?.trim() || 'Shri R. K. Hegde, KAS (District Officer)';
+  const officer = officerName?.trim() || 'Shri R. K. Hegde, KAS';
   const nowStr = new Date().toISOString();
-  const noteRemarks = remarks?.trim() || 'Verified and accepted by District Officer';
+  const noteRemarks = remarks?.trim() || 'Verified and cleared for district execution.';
 
   const verificationState: DistrictVerificationState = {
     status: 'VERIFIED',
@@ -340,7 +340,9 @@ export async function verifyDistrictProject(
   await collection.updateOne(filter, {
     $set: {
       districtStatus: 'VERIFIED',
+      verifiedAt: new Date(nowStr),
       districtVerifiedAt: nowStr,
+      verifiedBy: officer,
       districtVerifiedBy: officer,
       districtVerification: verificationState,
       updatedAt: new Date()
@@ -363,7 +365,8 @@ export async function rejectDistrictProject(
   id: string,
   reason: string,
   officerName?: string,
-  officerDistrict?: string
+  officerDistrict?: string,
+  officerRole?: string
 ): Promise<any> {
   if (!reason || !reason.trim()) {
     throw new Error('A specific justification/reason for returning/rejecting is strictly required.');
@@ -392,7 +395,7 @@ export async function rejectDistrictProject(
     }
   }
 
-  const officer = officerName?.trim() || 'Shri R. K. Hegde, KAS (District Officer)';
+  const officer = officerName?.trim() || 'Shri R. K. Hegde, KAS';
   const nowStr = new Date().toISOString();
   const cleanReason = reason.trim();
 
@@ -418,9 +421,12 @@ export async function rejectDistrictProject(
   await collection.updateOne(filter, {
     $set: {
       districtStatus: 'RETURNED',
-      districtRejectionReason: cleanReason,
+      returnedAt: new Date(nowStr),
       districtReviewedAt: nowStr,
+      returnedBy: officer,
       districtReviewedBy: officer,
+      rejectionJustification: cleanReason,
+      districtRejectionReason: cleanReason,
       districtVerification: verificationState,
       updatedAt: new Date()
     },

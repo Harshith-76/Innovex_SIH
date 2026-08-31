@@ -63,13 +63,13 @@ export async function getProjectById(req: Request, res: Response, next: NextFunc
 }
 
 /**
- * POST / PUT /api/district-monitoring/projects/:id/verify OR /api/district/projects/:id/verify
+ * PATCH / POST / PUT /api/district-monitoring/projects/:id/verify
  * Verifies and accepts a project at district level.
  */
 export async function verifyProject(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const { officerName, officerDistrict, remarks } = req.body || {};
+    const { officerName, officerDistrict, officerRole, remarks } = req.body || {};
 
     if (!id || !id.trim()) {
       res.status(400).json({ error: 'Project ID parameter is required.' });
@@ -94,34 +94,36 @@ export async function verifyProject(req: Request, res: Response, next: NextFunct
 }
 
 /**
- * POST / PUT /api/district-monitoring/projects/:id/reject OR /api/district/projects/:id/reject
- * Rejects / returns a project at district level with a required reason.
+ * PATCH / POST / PUT /api/district-monitoring/projects/:id/return OR /reject
+ * Rejects / returns a project at district level with a required justification.
  */
 export async function rejectProject(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const { reason, officerName, officerDistrict } = req.body || {};
+    const { reason, justification, officerName, officerDistrict, officerRole } = req.body || {};
 
     if (!id || !id.trim()) {
       res.status(400).json({ error: 'Project ID parameter is required.' });
       return;
     }
 
-    if (!reason || !String(reason).trim()) {
-      res.status(400).json({ error: 'A specific reason for rejection/return is strictly required.' });
+    const finalReason = String(justification || reason || '').trim();
+    if (!finalReason) {
+      res.status(400).json({ error: 'Justification/reason for return/rejection is mandatory and cannot be empty.' });
       return;
     }
 
     const updatedProject = await districtService.rejectDistrictProject(
       id,
-      reason,
+      finalReason,
       officerName,
-      officerDistrict
+      officerDistrict,
+      officerRole
     );
 
     res.status(200).json({
       success: true,
-      message: 'Project returned/rejected with recorded justification.',
+      message: 'Project returned with recorded justification.',
       data: updatedProject,
     });
   } catch (error) {

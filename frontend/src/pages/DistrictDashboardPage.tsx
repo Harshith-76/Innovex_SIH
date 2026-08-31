@@ -4,12 +4,11 @@ import {
   fetchDistrictProjectsWithCounts,
   fetchDistrictMonitoringStats,
   fetchDistrictMonitoringActivity,
-  verifyDistrictProject,
-  rejectDistrictProject,
   DistrictMonitoringProject,
   DistrictMonitoringStats,
   DistrictMonitoringActivity
 } from '../services/api';
+import { ProjectReviewModal } from '../components/district/ProjectReviewModal';
 import {
   FolderKanban,
   CheckCircle2,
@@ -60,15 +59,7 @@ export const DistrictDashboardPage: React.FC = () => {
 
   // Selected Project for Review Modal
   const [selectedProject, setSelectedProject] = useState<DistrictMonitoringProject | null>(null);
-  const [verificationRemarks, setVerificationRemarks] = useState<string>('');
-  const [isRejecting, setIsRejecting] = useState<boolean>(false);
-  const [rejectReason, setRejectReason] = useState<string>('');
-  const [isActionSubmitting, setIsActionSubmitting] = useState<boolean>(false);
-  const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
-  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
-
-  // Officer name
-  const officerName = 'Shri R. K. Hegde, KAS (District Officer)';
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Load live data from MongoDB
   const loadDashboardData = useCallback(async () => {
@@ -104,68 +95,12 @@ export const DistrictDashboardPage: React.FC = () => {
     loadDashboardData();
   }, [loadDashboardData]);
 
-  // Handle Verify & Accept
-  const handleVerify = async () => {
-    if (!selectedProject) return;
-    setIsActionSubmitting(true);
-    setActionErrorMessage(null);
-    try {
-      const updated = await verifyDistrictProject(
-        selectedProject.id || selectedProject._id,
-        officerName,
-        verificationRemarks.trim() || 'Verified and accepted for district land acquisition.'
-      );
-
-      setActionSuccessMessage(`Project "${updated.projectName}" has been verified and accepted successfully.`);
-      setTimeout(() => {
-        setActionSuccessMessage(null);
-        setSelectedProject(null);
-        setVerificationRemarks('');
-      }, 1200);
-
-      // Refresh dashboard data
-      await loadDashboardData();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setActionErrorMessage(msg);
-    } finally {
-      setIsActionSubmitting(false);
-    }
-  };
-
-  // Handle Reject / Return
-  const handleReject = async () => {
-    if (!selectedProject) return;
-    if (!rejectReason.trim()) {
-      setActionErrorMessage('Please provide a specific justification/reason for returning this project.');
-      return;
-    }
-
-    setIsActionSubmitting(true);
-    setActionErrorMessage(null);
-    try {
-      const updated = await rejectDistrictProject(
-        selectedProject.id || selectedProject._id,
-        rejectReason.trim(),
-        officerName
-      );
-
-      setActionSuccessMessage(`Project "${updated.projectName}" has been returned to the forwarding authority.`);
-      setTimeout(() => {
-        setActionSuccessMessage(null);
-        setSelectedProject(null);
-        setIsRejecting(false);
-        setRejectReason('');
-      }, 1200);
-
-      // Refresh dashboard data
-      await loadDashboardData();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setActionErrorMessage(msg);
-    } finally {
-      setIsActionSubmitting(false);
-    }
+  const handleActionSuccess = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+    loadDashboardData();
   };
 
   const formatDate = (dateStr?: string | Date) => {
@@ -184,6 +119,46 @@ export const DistrictDashboardPage: React.FC = () => {
 
   return (
     <div className="page-body">
+      {/* Toast Notification Banner */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 9999,
+            backgroundColor: 'var(--gov-navy-900)',
+            color: '#ffffff',
+            borderLeft: '4px solid var(--gov-green-500)',
+            borderRadius: '4px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            padding: '12px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '13px',
+            fontWeight: 600,
+            animation: 'fadeIn 0.3s ease',
+          }}
+        >
+          <CheckCircle2 size={18} color="var(--gov-green-400)" />
+          <span>{toastMessage}</span>
+          <button
+            onClick={() => setToastMessage(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#ffffff',
+              cursor: 'pointer',
+              marginLeft: '8px',
+              opacity: 0.7,
+            }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* ───────────────────────────────────────────────────────────────────
           1. HEADER
          ─────────────────────────────────────────────────────────────────── */}
@@ -782,405 +757,14 @@ export const DistrictDashboardPage: React.FC = () => {
       </div>
 
       {/* ───────────────────────────────────────────────────────────────────
-          PROJECT REVIEW & VERIFICATION MODAL
+          PROJECT REVIEW & VERIFICATION MODAL COMPONENT
          ─────────────────────────────────────────────────────────────────── */}
       {selectedProject && (
-        <div className="gov-modal-backdrop" onClick={() => setSelectedProject(null)}>
-          <div
-            className="gov-modal-container"
-            style={{ maxWidth: '850px', maxHeight: '90vh', overflowY: 'auto' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="gov-modal-header">
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <h2 className="gov-modal-title" style={{ fontSize: '17px', margin: 0 }}>
-                    {selectedProject.projectName}
-                  </h2>
-                  <span
-                    style={{
-                      padding: '2px 8px',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      backgroundColor: 'var(--gov-blue-50)',
-                      color: 'var(--gov-blue-700)',
-                      border: '1px solid var(--gov-blue-100)',
-                    }}
-                  >
-                    {selectedProject.projectCode}
-                  </span>
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--gov-slate-500)', marginTop: '4px' }}>
-                  Forwarded by State Portal for District Verification & Jurisdiction Acceptance
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setSelectedProject(null);
-                  setIsRejecting(false);
-                }}
-                className="gov-btn-icon"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Action Feedback Messages */}
-            {actionSuccessMessage && (
-              <div
-                style={{
-                  margin: '16px',
-                  padding: '12px 16px',
-                  backgroundColor: 'var(--gov-green-50)',
-                  border: '1px solid var(--gov-green-200)',
-                  borderRadius: '6px',
-                  color: 'var(--gov-green-800)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '13px',
-                }}
-              >
-                <CheckCircle2 size={16} />
-                <span>{actionSuccessMessage}</span>
-              </div>
-            )}
-
-            {actionErrorMessage && (
-              <div
-                style={{
-                  margin: '16px',
-                  padding: '12px 16px',
-                  backgroundColor: 'var(--gov-red-50)',
-                  border: '1px solid var(--gov-red-200)',
-                  borderRadius: '6px',
-                  color: 'var(--gov-red-800)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '13px',
-                }}
-              >
-                <AlertCircle size={16} />
-                <span>{actionErrorMessage}</span>
-              </div>
-            )}
-
-            {/* Modal Body */}
-            <div className="gov-modal-body" style={{ padding: '20px' }}>
-              {/* Project Information */}
-              <div style={{ marginBottom: '20px' }}>
-                <h3
-                  style={{
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    color: 'var(--gov-navy-900)',
-                    marginBottom: '12px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <FileText size={14} color="var(--gov-blue-600)" />
-                  Project Information
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                  <div className="info-block">
-                    <span className="info-label">PROJECT TYPE</span>
-                    <span className="info-val">{selectedProject.projectType || 'General Infrastructure'}</span>
-                  </div>
-                  <div className="info-block">
-                    <span className="info-label">DISTRICT</span>
-                    <span className="info-val">{selectedProject.district}</span>
-                  </div>
-                  <div className="info-block">
-                    <span className="info-label">IMPLEMENTING AGENCY</span>
-                    <span className="info-val">{selectedProject.implementingAgency || selectedProject.agencyName}</span>
-                  </div>
-                  <div className="info-block">
-                    <span className="info-label">PARENT AUTHORITY</span>
-                    <span className="info-val">{selectedProject.parentAuthority || 'Govt of Karnataka'}</span>
-                  </div>
-                  <div className="info-block">
-                    <span className="info-label">DEPARTMENT</span>
-                    <span className="info-val">{selectedProject.department || 'Public Works Department'}</span>
-                  </div>
-                  <div className="info-block">
-                    <span className="info-label">FINANCIAL STATUS</span>
-                    <span className="info-val">{selectedProject.financialStatus || 'Approved'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Land Details & Financials */}
-              <div style={{ marginBottom: '20px' }}>
-                <h3
-                  style={{
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    color: 'var(--gov-navy-900)',
-                    marginBottom: '12px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <Layers size={14} color="var(--gov-blue-600)" />
-                  Land & Compensation Details
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                  <div className="info-block highlight">
-                    <span className="info-label">LAND REQUIRED</span>
-                    <span className="info-val" style={{ color: 'var(--gov-navy-900)' }}>
-                      {selectedProject.landRequiredAcres} Acres
-                    </span>
-                  </div>
-                  <div className="info-block">
-                    <span className="info-label">LAND ACQUIRED</span>
-                    <span className="info-val" style={{ color: 'var(--gov-green-700)' }}>
-                      {selectedProject.landAcquiredAcres} Acres
-                    </span>
-                  </div>
-                  <div className="info-block">
-                    <span className="info-label">ESTIMATED COMPENSATION</span>
-                    <span className="info-val" style={{ color: 'var(--gov-blue-700)' }}>
-                      ₹{selectedProject.estimatedCompensationCr} Cr
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Forwarding Record & Remarks */}
-              <div style={{ marginBottom: '20px' }}>
-                <h3
-                  style={{
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    color: 'var(--gov-navy-900)',
-                    marginBottom: '12px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <Calendar size={14} color="var(--gov-blue-600)" />
-                  Approval & Forwarding Details
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                  <div className="info-block">
-                    <span className="info-label">APPROVAL STATUS</span>
-                    <span className="info-val">{selectedProject.approvalStatus}</span>
-                  </div>
-                  <div className="info-block">
-                    <span className="info-label">APPROVED BY</span>
-                    <span className="info-val">{selectedProject.approvedBy || 'State SLAO Directorate'}</span>
-                  </div>
-                  <div className="info-block">
-                    <span className="info-label">APPROVED DATE</span>
-                    <span className="info-val">{formatDate(selectedProject.approvedAt)}</span>
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    marginTop: '12px',
-                    padding: '12px 14px',
-                    backgroundColor: 'var(--gov-slate-50)',
-                    border: '1px solid var(--gov-slate-200)',
-                    borderRadius: '6px',
-                  }}
-                >
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gov-slate-600)', marginBottom: '4px' }}>
-                    FORWARDING OFFICER REMARKS
-                  </div>
-                  <div style={{ fontSize: '12.5px', color: 'var(--gov-slate-800)', lineHeight: '1.5' }}>
-                    {selectedProject.officerRemarks || 'No forwarding remarks specified.'}
-                  </div>
-                </div>
-              </div>
-
-              {/* District Status Badge */}
-              <div
-                style={{
-                  padding: '12px 16px',
-                  borderRadius: '6px',
-                  marginBottom: '16px',
-                  backgroundColor:
-                    (selectedProject.districtStatus || '').toUpperCase() === 'VERIFIED'
-                      ? 'var(--gov-green-50)'
-                      : (selectedProject.districtStatus || '').toUpperCase() === 'RETURNED' ||
-                        (selectedProject.districtStatus || '').toUpperCase() === 'REJECTED'
-                      ? 'var(--gov-red-50)'
-                      : 'var(--gov-amber-50)',
-                  border:
-                    (selectedProject.districtStatus || '').toUpperCase() === 'VERIFIED'
-                      ? '1px solid var(--gov-green-200)'
-                      : (selectedProject.districtStatus || '').toUpperCase() === 'RETURNED' ||
-                        (selectedProject.districtStatus || '').toUpperCase() === 'REJECTED'
-                      ? '1px solid var(--gov-red-200)'
-                      : '1px solid var(--gov-amber-200)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gov-slate-600)' }}>
-                      CURRENT DISTRICT VERIFICATION STATUS:
-                    </span>
-                    <div style={{ fontSize: '13px', fontWeight: 700, marginTop: '2px' }}>
-                      {(selectedProject.districtStatus || 'PENDING_REVIEW').toUpperCase()}
-                    </div>
-                  </div>
-                  {selectedProject.districtVerifiedBy && (
-                    <div style={{ textAlign: 'right', fontSize: '11.5px', color: 'var(--gov-slate-600)' }}>
-                      Verified by <strong>{selectedProject.districtVerifiedBy}</strong> on{' '}
-                      {formatDate(selectedProject.districtVerifiedAt)}
-                    </div>
-                  )}
-                  {selectedProject.districtReviewedBy && (
-                    <div style={{ textAlign: 'right', fontSize: '11.5px', color: 'var(--gov-red-700)' }}>
-                      Returned by <strong>{selectedProject.districtReviewedBy}</strong> on{' '}
-                      {formatDate(selectedProject.districtReviewedAt)}
-                    </div>
-                  )}
-                </div>
-                {selectedProject.districtRejectionReason && (
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--gov-red-800)' }}>
-                    <strong>Recorded Return Justification:</strong> {selectedProject.districtRejectionReason}
-                  </div>
-                )}
-              </div>
-
-              {/* Verify / Reject Forms */}
-              {isRejecting ? (
-                <div
-                  style={{
-                    padding: '16px',
-                    backgroundColor: 'var(--gov-red-50)',
-                    border: '1px solid var(--gov-red-200)',
-                    borderRadius: '6px',
-                  }}
-                >
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--gov-red-900)', marginBottom: '6px' }}>
-                    Reason for Returning / Rejecting Project (Mandatory) *
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Enter explicit justification (e.g. boundary overlap, missing survey clearances)..."
-                    value={rejectReason}
-                    onChange={(e) => setRejectReason(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      fontSize: '12px',
-                      border: '1px solid var(--gov-red-300)',
-                      borderRadius: '4px',
-                      marginBottom: '10px',
-                    }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                    <button
-                      className="gov-btn gov-btn-secondary gov-btn-sm"
-                      onClick={() => setIsRejecting(false)}
-                      disabled={isActionSubmitting}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      className="gov-btn gov-btn-danger gov-btn-sm"
-                      onClick={handleReject}
-                      disabled={isActionSubmitting || !rejectReason.trim()}
-                    >
-                      {isActionSubmitting ? 'Returning...' : 'Confirm Return / Reject'}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ marginTop: '12px' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--gov-slate-600)', marginBottom: '4px' }}>
-                    Verification Remarks / Instructions (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Cadastral survey verified with Bhoomi RTC records. Approved for award determination."
-                    value={verificationRemarks}
-                    onChange={(e) => setVerificationRemarks(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      fontSize: '12px',
-                      border: '1px solid var(--gov-slate-300)',
-                      borderRadius: '4px',
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer Actions */}
-            <div
-              className="gov-modal-footer"
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: '16px 20px',
-                borderTop: '1px solid var(--gov-slate-200)',
-              }}
-            >
-              <button
-                className="gov-btn gov-btn-secondary"
-                onClick={() => {
-                  setSelectedProject(null);
-                  setIsRejecting(false);
-                }}
-                disabled={isActionSubmitting}
-              >
-                Close
-              </button>
-
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {!isRejecting && (
-                  <button
-                    className="gov-btn gov-btn-danger"
-                    onClick={() => setIsRejecting(true)}
-                    disabled={isActionSubmitting}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <XCircle size={14} />
-                    <span>Return / Reject</span>
-                  </button>
-                )}
-
-                {!isRejecting && (
-                  <button
-                    className="gov-btn gov-btn-primary"
-                    onClick={handleVerify}
-                    disabled={isActionSubmitting}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <CheckCircle2 size={14} />
-                    <span>{isActionSubmitting ? 'Verifying...' : 'Verify & Accept Project'}</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <ProjectReviewModal
+          project={selectedProject}
+          onClose={() => setSelectedProject(null)}
+          onSuccess={handleActionSuccess}
+        />
       )}
     </div>
   );

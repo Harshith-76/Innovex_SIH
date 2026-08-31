@@ -44,6 +44,8 @@ export interface ParcelQueryParams {
   village?: string;
   survey_no?: string;
   category?: string;
+  ids?: string;
+  projectCode?: string;
   limit?: string | number;
 }
 
@@ -89,6 +91,8 @@ export async function fetchParcels(params?: ParcelQueryParams): Promise<GeoJSONF
     if (params.village && params.village !== 'ALL') searchParams.set('village', params.village);
     if (params.survey_no && params.survey_no.trim()) searchParams.set('survey_no', params.survey_no.trim());
     if (params.category && params.category !== 'ALL') searchParams.set('category', params.category);
+    if (params.ids && params.ids.trim()) searchParams.set('ids', params.ids.trim());
+    if (params.projectCode && params.projectCode.trim()) searchParams.set('projectCode', params.projectCode.trim());
     if (params.limit) searchParams.set('limit', String(params.limit));
   }
 
@@ -458,14 +462,15 @@ export async function verifyDistrictProject(
   id: string,
   officerName?: string,
   officerDistrict?: string,
-  remarks?: string
+  remarks?: string,
+  officerRole?: string
 ): Promise<DistrictMonitoringProject> {
   const response = await fetch(`${API_BASE_URL}/district-monitoring/projects/${encodeURIComponent(id.trim())}/verify`, {
-    method: 'PUT',
+    method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ officerName, officerDistrict, remarks }),
+    body: JSON.stringify({ officerName, officerRole: officerRole || 'District Land Acquisition Officer', officerDistrict, remarks }),
   });
 
   if (!response.ok) {
@@ -478,20 +483,27 @@ export async function verifyDistrictProject(
 }
 
 /**
- * Rejects/returns a project at district level with a required reason.
+ * Rejects/returns a project at district level with a required justification.
  */
 export async function rejectDistrictProject(
   id: string,
   reason: string,
   officerName?: string,
-  officerDistrict?: string
+  officerDistrict?: string,
+  officerRole?: string
 ): Promise<DistrictMonitoringProject> {
-  const response = await fetch(`${API_BASE_URL}/district-monitoring/projects/${encodeURIComponent(id.trim())}/reject`, {
-    method: 'PUT',
+  const response = await fetch(`${API_BASE_URL}/district-monitoring/projects/${encodeURIComponent(id.trim())}/return`, {
+    method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ reason, officerName, officerDistrict }),
+    body: JSON.stringify({
+      justification: reason,
+      reason,
+      officerName,
+      officerRole: officerRole || 'District Land Acquisition Officer',
+      officerDistrict,
+    }),
   });
 
   if (!response.ok) {

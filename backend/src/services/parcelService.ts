@@ -51,6 +51,8 @@ export interface ParcelQueryParams {
   village?: string;
   survey_no?: string;
   category?: string;
+  ids?: string;
+  projectCode?: string;
   limit?: string | number;
 }
 
@@ -136,6 +138,31 @@ export async function getParcels(params: ParcelQueryParams): Promise<GeoJSONFeat
   if (params.category && params.category.trim()) {
     const reg = { $regex: new RegExp(`^${params.category.trim()}$`, 'i') };
     andClauses.push({ $or: [{ category: reg }, { 'cadastral.category': reg }] });
+  }
+
+  if (params.ids && params.ids.trim()) {
+    const idList = params.ids.split(',').map(s => s.trim()).filter(Boolean);
+    if (idList.length > 0) {
+      andClauses.push({
+        $or: [
+          { parcel_id: { $in: idList } },
+          { _id: { $in: idList as any } },
+          { cadastral_id: { $in: idList } },
+          { 'cadastral.cadastral_id': { $in: idList } }
+        ]
+      });
+    }
+  }
+
+  if (params.projectCode && params.projectCode.trim()) {
+    const pCode = params.projectCode.trim();
+    andClauses.push({
+      $or: [
+        { projectCode: pCode },
+        { 'project.code': pCode },
+        { associatedProjectCodes: pCode }
+      ]
+    });
   }
 
   if (andClauses.length > 0) {
