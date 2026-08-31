@@ -44,6 +44,8 @@ export interface ParcelQueryParams {
   village?: string;
   survey_no?: string;
   category?: string;
+  ids?: string;
+  projectCode?: string;
   limit?: string | number;
 }
 
@@ -89,6 +91,8 @@ export async function fetchParcels(params?: ParcelQueryParams): Promise<GeoJSONF
     if (params.village && params.village !== 'ALL') searchParams.set('village', params.village);
     if (params.survey_no && params.survey_no.trim()) searchParams.set('survey_no', params.survey_no.trim());
     if (params.category && params.category !== 'ALL') searchParams.set('category', params.category);
+    if (params.ids && params.ids.trim()) searchParams.set('ids', params.ids.trim());
+    if (params.projectCode && params.projectCode.trim()) searchParams.set('projectCode', params.projectCode.trim());
     if (params.limit) searchParams.set('limit', String(params.limit));
   }
 
@@ -263,4 +267,250 @@ export async function approveProject(id: string): Promise<any> {
   }
 
   return response.json();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DISTRICT MONITORING & VERIFICATION API (Project_Approved_Project)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface DistrictMonitoringProject {
+  id: string;
+  _id: string;
+  projectName: string;
+  projectCode: string;
+  projectType: string;
+  agencyName: string;
+  agencyType: string;
+  department: string;
+  district: string;
+  implementingAgency: string;
+  parentAuthority: string;
+  landRequiredAcres: number | string;
+  landAcquiredAcres: number | string;
+  pendingLandAcres?: number | string;
+  estimatedCompensationCr: number | string;
+  totalCompensationPaidCr?: number | string;
+  pendingCompensationCr?: number | string;
+  financialStatus: string;
+  approvalStatus: string;
+  approvedBy: string;
+  approvedAt?: string;
+  forwardedAt?: string;
+  forwardedTo: string;
+  officerRemarks?: string;
+  scope?: string;
+  description?: string;
+  taluks?: string[];
+  districtStatus: 'PENDING_REVIEW' | 'VERIFIED' | 'RETURNED' | 'REJECTED';
+  districtVerifiedAt?: string;
+  districtVerifiedBy?: string;
+  districtRejectionReason?: string;
+  districtReviewedAt?: string;
+  districtReviewedBy?: string;
+  districtVerification?: {
+    status: 'PENDING_REVIEW' | 'VERIFIED' | 'RETURNED' | 'REJECTED' | 'PENDING';
+    verifiedBy?: string;
+    verifiedAt?: string;
+    rejectedBy?: string;
+    rejectedAt?: string;
+    reason?: string;
+    remarks?: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface DistrictMonitoringStats {
+  district: string;
+  projectsReceived: number;
+  pendingVerification: number;
+  verifiedProjects: number;
+  returnedProjects: number;
+  totalLandRequiredAcres: number;
+  totalLandAcquiredAcres: number;
+  pendingLandAcres: number;
+  acquisitionCompletionPercentage: number;
+  totalEstimatedCompensationCr: number;
+  totalPaidCompensationCr: number;
+  pendingCompensationCr: number;
+  compensationPayoutPercentage: number;
+}
+
+export interface DistrictMonitoringActivity {
+  id: string;
+  projectId: string;
+  projectName: string;
+  projectCode: string;
+  district: string;
+  action: 'VERIFIED' | 'RETURNED' | 'REJECTED';
+  officer: string;
+  date: string;
+  remarks?: string;
+  reason?: string;
+}
+
+export interface DistrictProjectsApiResponse {
+  success: boolean;
+  counts: {
+    pending: number;
+    verified: number;
+    returned: number;
+    all: number;
+  };
+  count: number;
+  data: DistrictMonitoringProject[];
+}
+
+/**
+ * Fetches approved projects forwarded to district from Project_Approved_Project collection.
+ */
+export async function fetchDistrictMonitoringProjects(params?: {
+  district?: string;
+  tab?: 'pending' | 'verified' | 'returned' | 'all' | string;
+  districtStatus?: string;
+  verificationStatus?: string;
+  search?: string;
+}): Promise<DistrictMonitoringProject[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.district) searchParams.set('district', params.district);
+  if (params?.tab) searchParams.set('tab', params.tab);
+  if (params?.districtStatus) searchParams.set('districtStatus', params.districtStatus);
+  if (params?.verificationStatus) searchParams.set('verificationStatus', params.verificationStatus);
+  if (params?.search) searchParams.set('search', params.search);
+
+  const query = searchParams.toString();
+  const url = query
+    ? `${API_BASE_URL}/district-monitoring/projects?${query}`
+    : `${API_BASE_URL}/district-monitoring/projects`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.error || `Failed to fetch district projects: ${response.status} ${response.statusText}`);
+  }
+
+  const json = await response.json();
+  return json.data || [];
+}
+
+/**
+ * Fetches projects along with tab count aggregation.
+ */
+export async function fetchDistrictProjectsWithCounts(params?: {
+  district?: string;
+  tab?: 'pending' | 'verified' | 'returned' | 'all' | string;
+  districtStatus?: string;
+  verificationStatus?: string;
+  search?: string;
+}): Promise<DistrictProjectsApiResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.district) searchParams.set('district', params.district);
+  if (params?.tab) searchParams.set('tab', params.tab);
+  if (params?.districtStatus) searchParams.set('districtStatus', params.districtStatus);
+  if (params?.verificationStatus) searchParams.set('verificationStatus', params.verificationStatus);
+  if (params?.search) searchParams.set('search', params.search);
+
+  const query = searchParams.toString();
+  const url = query
+    ? `${API_BASE_URL}/district-monitoring/projects?${query}`
+    : `${API_BASE_URL}/district-monitoring/projects`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.error || `Failed to fetch district projects: ${response.status} ${response.statusText}`);
+  }
+
+  const json: DistrictProjectsApiResponse = await response.json();
+  return json;
+}
+
+/**
+ * Fetches calculated district summary metrics from database.
+ */
+export async function fetchDistrictMonitoringStats(district: string = 'Bengaluru'): Promise<DistrictMonitoringStats> {
+  const url = `${API_BASE_URL}/district-monitoring/stats?district=${encodeURIComponent(district)}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.error || `Failed to fetch district stats: ${response.status} ${response.statusText}`);
+  }
+
+  const json = await response.json();
+  return json.data;
+}
+
+/**
+ * Fetches audit activity log of district verification actions.
+ */
+export async function fetchDistrictMonitoringActivity(district: string = 'Bengaluru'): Promise<DistrictMonitoringActivity[]> {
+  const url = `${API_BASE_URL}/district-monitoring/activity?district=${encodeURIComponent(district)}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.error || `Failed to fetch district activity: ${response.status} ${response.statusText}`);
+  }
+
+  const json = await response.json();
+  return json.data || [];
+}
+
+/**
+ * Verifies and accepts a project at district level.
+ */
+export async function verifyDistrictProject(
+  id: string,
+  officerName?: string,
+  officerDistrict?: string,
+  remarks?: string,
+  officerRole?: string
+): Promise<DistrictMonitoringProject> {
+  const response = await fetch(`${API_BASE_URL}/district-monitoring/projects/${encodeURIComponent(id.trim())}/verify`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ officerName, officerRole: officerRole || 'District Land Acquisition Officer', officerDistrict, remarks }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.error || `Failed to verify project: ${response.status} ${response.statusText}`);
+  }
+
+  const json = await response.json();
+  return json.data;
+}
+
+/**
+ * Rejects/returns a project at district level with a required justification.
+ */
+export async function rejectDistrictProject(
+  id: string,
+  reason: string,
+  officerName?: string,
+  officerDistrict?: string,
+  officerRole?: string
+): Promise<DistrictMonitoringProject> {
+  const response = await fetch(`${API_BASE_URL}/district-monitoring/projects/${encodeURIComponent(id.trim())}/return`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      justification: reason,
+      reason,
+      officerName,
+      officerRole: officerRole || 'District Land Acquisition Officer',
+      officerDistrict,
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.error || `Failed to return project: ${response.status} ${response.statusText}`);
+  }
+
+  const json = await response.json();
+  return json.data;
 }

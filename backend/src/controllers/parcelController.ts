@@ -8,7 +8,7 @@ import * as parcelService from '../services/parcelService.js';
  */
 export async function getParcels(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { district, taluk, village, survey_no, category, limit } = req.query;
+    const { district, taluk, village, survey_no, category, ids, projectCode, limit } = req.query;
 
     const featureCollection = await parcelService.getParcels({
       district: typeof district === 'string' ? district : undefined,
@@ -16,6 +16,8 @@ export async function getParcels(req: Request, res: Response, next: NextFunction
       village: typeof village === 'string' ? village : undefined,
       survey_no: typeof survey_no === 'string' ? survey_no : undefined,
       category: typeof category === 'string' ? category : undefined,
+      ids: typeof ids === 'string' ? ids : undefined,
+      projectCode: typeof projectCode === 'string' ? projectCode : undefined,
       limit: typeof limit === 'string' ? limit : undefined,
     });
 

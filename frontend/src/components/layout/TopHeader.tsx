@@ -14,6 +14,8 @@ import { NotificationDrawer } from '../common/NotificationDrawer';
 
 const PAGE_NAMES: Record<PageId, string> = {
   dashboard: 'National / State Dashboard',
+  'district-dashboard': 'District Monitoring',
+  'district-monitoring': 'District Monitoring',
   projects: 'Land Acquisition Projects',
   'project-detail': 'Project Workspace',
   'project-route': 'Project Route & GIS Alignment',
@@ -23,7 +25,7 @@ const PAGE_NAMES: Record<PageId, string> = {
   'affected-families': 'Affected Families & R&R',
   documents: 'Documents & Records Repository',
   alerts: 'Operational Alerts & Notifications',
-  analytics: 'Project Risk & Delay Analytics',
+  analytics: 'District Monitoring',
   administration: 'Administration & Access Control'
 };
 
