@@ -144,8 +144,6 @@ const FinancialProjectDetails: React.FC<{ project: LandAcquisitionProject, onBac
             showLegend={false}
           />
         </div>
-          />
-        </div>
         {selectedParcelId && (
           <div style={{ marginTop: '12px', padding: '12px', backgroundColor: 'var(--gov-blue-50)', borderRadius: 'var(--radius-sm)' }}>
              {(() => {
