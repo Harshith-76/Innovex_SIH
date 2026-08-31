@@ -5,6 +5,7 @@ let db: Db | null = null;
 
 const DB_NAME = process.env.DB_NAME || 'lams_db';
 const PARCELS_COLLECTION = 'parcels';
+const PROJECTS_COLLECTION = 'projects';
 
 /**
  * Establishes and caches the MongoDB Atlas connection.
@@ -69,6 +70,13 @@ export function getDb(): Db {
  */
 export function getParcelsCollection<T extends Document = Document>(): Collection<T> {
   return getDb().collection<T>(PARCELS_COLLECTION);
+}
+
+/**
+ * Returns the typed projects collection from the active database.
+ */
+export function getProjectsCollection<T extends Document = Document>(): Collection<T> {
+  return getDb().collection<T>(PROJECTS_COLLECTION);
 }
 
 /**
