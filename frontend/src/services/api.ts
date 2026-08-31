@@ -211,3 +211,22 @@ export async function fetchHissaByParcelId(parcelId: string): Promise<any[]> {
   }
   return response.json();
 }
+
+/**
+ * Approves a project and stores it in the approved collection.
+ */
+export async function approveProject(id: string): Promise<any> {
+  const response = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(id.trim())}/approve`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.error || `Failed to approve project: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}

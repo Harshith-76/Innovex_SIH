@@ -115,3 +115,30 @@ export async function updateProject(req: Request, res: Response, next: NextFunct
     next(error);
   }
 }
+
+/**
+ * POST /api/projects/:id/approve
+ * Approves an existing project document and stores it in Project_Approved_Project collection.
+ */
+export async function approveProject(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+
+    if (!id || !id.trim()) {
+      res.status(400).json({ error: 'Project ID parameter is required.' });
+      return;
+    }
+
+    const approved = await projectService.approveProject(id);
+
+    if (!approved) {
+      res.status(404).json({ error: `Project not found with ID or code: ${id}` });
+      return;
+    }
+
+    res.status(200).json(approved);
+  } catch (error) {
+    next(error);
+  }
+}
+

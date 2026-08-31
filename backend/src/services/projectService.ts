@@ -1,5 +1,5 @@
 import { Filter, ObjectId, Document } from 'mongodb';
-import { getProjectsCollection } from '../config/database.js';
+import { getProjectsCollection, getApprovedProjectsCollection } from '../config/database.js';
 
 export interface ProjectDocument extends Document {
   _id: ObjectId;
@@ -237,6 +237,41 @@ export async function updateProject(id: string, updates: Partial<ProjectDocument
   if (!result) {
     return null;
   }
+
+  return formatProject(result as ProjectDocument);
+}
+
+/**
+ * Approves a project and stores it in the Project_Approved_Project collection.
+ */
+export async function approveProject(id: string): Promise<any | null> {
+  const collection = getProjectsCollection<ProjectDocument>();
+  const approvedCollection = getApprovedProjectsCollection<ProjectDocument>();
+  const trimmedId = id.trim();
+
+  let filter: Filter<ProjectDocument> = {};
+  if (ObjectId.isValid(trimmedId)) {
+    filter = { _id: new ObjectId(trimmedId) };
+  } else {
+    filter = { code: trimmedId };
+  }
+
+  const result = await collection.findOneAndUpdate(
+    filter,
+    { $set: { financialStatus: 'Approved', updatedAt: new Date() } as any },
+    { returnDocument: 'after' }
+  );
+
+  if (!result) {
+    return null;
+  }
+
+  // Insert into approved collection (using upsert to avoid duplicates)
+  await approvedCollection.updateOne(
+    { _id: result._id },
+    { $set: result },
+    { upsert: true }
+  );
 
   return formatProject(result as ProjectDocument);
 }

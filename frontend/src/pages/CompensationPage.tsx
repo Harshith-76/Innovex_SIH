@@ -1,357 +1,480 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { CompensationRecord, CompensationStatus } from '../types';
-import { MetricCard } from '../components/common/MetricCard';
+import { approveProject as approveProjectApi } from '../services/api';
+import { LandAcquisitionProject } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { LeafletGisMap } from '../components/gis/LeafletGisMap';
 import { Modal } from '../components/layout/Modal';
 import {
-  IndianRupee,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  Search,
-  Filter,
-  Download,
-  Send,
-  RefreshCw,
-  FileSpreadsheet,
-  Building
+  MapPin, ArrowLeft, Users, FileText, CheckCircle2,
+  Building2, IndianRupee, XCircle, Search
 } from 'lucide-react';
 
-export const CompensationPage: React.FC = () => {
-  const {
-    compensationRecords,
-    updateCompensationStatus,
-    activeProject,
-    searchQuery: globalSearch
-  } = useApp();
+const FinancialProjectDetails: React.FC<{ project: LandAcquisitionProject, onBack: () => void }> = ({ project, onBack }) => {
+  const { parcels, compensationRecords, documents, getHissaByParcelId } = useApp();
+  
+  const originalMapParcels = parcels.filter(p => p.projectId === project.id);
+  
+  // Ensure exactly 7 landowners as requested for calculation/table
+  const projectParcels = Array.from({ length: 7 }).map((_, index) => {
+    return {
+      parcelId: `${project.id}-parcel-${index + 1}`,
+      projectId: project.id,
+      surveyNumber: `SY-${100 + index}`,
+      ownerName: `Landowner ${index + 1}`,
+      areaAcres: Number((Math.random() * 5 + 1).toFixed(2)),
+      village: project.taluks?.[0] || 'Sample Village',
+      taluk: project.taluks?.[0] || 'Sample Taluk',
+      district: project.district || 'Sample District',
+      marketRatePerAcre: 500000 + (index * 50000),
+      hasHissa: false,
+      hissaRecords: [],
+      acquisitionStatus: 'Pending',
+      compensationStatus: 'Pending'
+    };
+  }) as any[];
+  const projectDocs = documents.filter(d => d.projectId === project.id);
+  const projectComp = compensationRecords.filter(c => c.projectId === project.id);
+  
+  const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  
+  const [calculatedParcels, setCalculatedParcels] = useState<any[]>([]);
+  const [isCalculated, setIsCalculated] = useState(false);
+  const [selectedOwnerForCalc, setSelectedOwnerForCalc] = useState<any>(null);
 
-  const [filterStatus, setFilterStatus] = useState<string>('ALL');
-  const [filterVillage, setFilterVillage] = useState<string>('ALL');
-  const [localSearch, setLocalSearch] = useState<string>('');
-  const [selectedRecord, setSelectedRecord] = useState<CompensationRecord | null>(null);
-  const [isDisburseModalOpen, setIsDisburseModalOpen] = useState(false);
-
-  const searchKeyword = (localSearch || globalSearch).toLowerCase().trim();
-
-  const filteredRecords = compensationRecords.filter((rec) => {
-    const matchesStatus = filterStatus === 'ALL' || rec.paymentStatus === filterStatus;
-    const matchesVillage = filterVillage === 'ALL' || rec.village === filterVillage;
-    const matchesSearch =
-      !searchKeyword ||
-      rec.ownerBeneficiary.toLowerCase().includes(searchKeyword) ||
-      rec.surveyNumber.toLowerCase().includes(searchKeyword) ||
-      rec.khataNumber.toLowerCase().includes(searchKeyword) ||
-      rec.awardOrderNumber.toLowerCase().includes(searchKeyword);
-
-    return matchesStatus && matchesVillage && matchesSearch;
-  });
-
-  const totalAssessed = compensationRecords.reduce((sum, r) => sum + r.assessedAmount, 0);
-  const totalPaid = compensationRecords.reduce((sum, r) => sum + r.paidAmount, 0);
-  const totalPending = compensationRecords.reduce((sum, r) => sum + r.pendingAmount, 0);
-
-  const handleDisbursePayment = () => {
-    if (!selectedRecord) return;
-    updateCompensationStatus(selectedRecord.id, 'Paid', `RBI-NEFT-${Date.now().toString().slice(-8)}`);
-    setIsDisburseModalOpen(false);
+  const handleCalculateAll = () => {
+    // Demonstration calculation
+    const calculated = projectParcels.map(p => {
+      const rate = p.marketRatePerAcre || 500000;
+      const baseValue = p.areaAcres * rate;
+      const solatium = baseValue; // 100% solatium
+      const otherComps = 150000; // Mock additional components
+      const total = baseValue + solatium + otherComps;
+      
+      return {
+        ...p,
+        baseValue,
+        solatium,
+        otherComps,
+        total,
+        rate
+      };
+    });
+    setCalculatedParcels(calculated);
+    setIsCalculated(true);
   };
+
+  const handleApprove = async () => {
+    setIsApproving(true);
+    try {
+      await approveProjectApi(project.id);
+      alert("Project financial assessment approved and safely stored in Project_Approved_Project database collection.");
+      setIsApproveModalOpen(false);
+      (project as any).financialStatus = 'Approved'; // update local state immediately
+      onBack();
+    } catch (err) {
+      console.error(err);
+      alert("Error approving project. Check console.");
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const handleReject = () => {
+    if (!rejectReason.trim()) {
+      alert("Please provide a reason for rejection.");
+      return;
+    }
+    alert("Project financial assessment rejected. Sent back with notes.");
+    setIsRejectModalOpen(false);
+    onBack();
+  };
+  
+  const totalAssessed = calculatedParcels.reduce((sum, p) => sum + p.total, 0);
 
   return (
     <div className="page-body">
-      {/* Header */}
-      <div className="page-header-row">
-        <div>
-          <h1 className="page-title">Compensation Management & Direct Benefit Transfer</h1>
-          <p className="page-subtitle">
-            Section 3G / RFCTLARR statutory award compensation ledger, e-Kuber bank disbursements and escrow management
-          </p>
+      <button className="gov-btn gov-btn-secondary gov-btn-sm" onClick={onBack} style={{ marginBottom: '16px' }}>
+        <ArrowLeft size={13} /> Back to Approved Projects
+      </button>
+
+      {/* Project Overview */}
+      <div className="gov-card" style={{ marginBottom: '16px' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--gov-navy-900)' }}>{project.name}</h2>
+        <div style={{ fontSize: '12px', color: 'var(--gov-slate-500)', marginBottom: '12px' }}>
+          Project ID: {project.code}
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            className="gov-btn gov-btn-secondary"
-            onClick={() => alert('Exporting Treasury RTGS payment scroll (RBI NEFT format)...')}
-          >
-            <Download size={13} /> Export Bank Scroll
-          </button>
-          <button
-            className="gov-btn gov-btn-primary"
-            onClick={() => alert('Batch processing 18 verified DBT payments to Lead Bank Gateway...')}
-          >
-            <Send size={13} /> Batch Disburse via e-Kuber
-          </button>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '12px' }}>
+          <div><span style={{ color: 'var(--gov-slate-500)' }}>Project Implementing Agency:</span> <br/><strong>{project.implementingAgency}</strong></div>
+          <div><span style={{ color: 'var(--gov-slate-500)' }}>District:</span> <br/><strong>{project.district}</strong></div>
+          <div><span style={{ color: 'var(--gov-slate-500)' }}>Taluk:</span> <br/><strong>{project.taluks.join(', ')}</strong></div>
+          <div><span style={{ color: 'var(--gov-slate-500)' }}>Project Type:</span> <br/><strong>{project.projectType || 'Infrastructure'}</strong></div>
+          <div><span style={{ color: 'var(--gov-slate-500)' }}>Required Land:</span> <br/><strong>{project.landRequiredAcres} acres</strong></div>
+          <div><span style={{ color: 'var(--gov-slate-500)' }}>LAO Status:</span> <br/><strong style={{color: 'var(--gov-green-700)'}}>Approved</strong></div>
+          <div><span style={{ color: 'var(--gov-slate-500)' }}>Financial Status:</span> <br/><strong style={{color: (project as any).financialStatus === 'Approved' ? 'var(--gov-green-700)' : 'var(--gov-amber-700)'}}>{(project as any).financialStatus === 'Approved' ? 'Approved' : 'Pending'}</strong></div>
+        </div>
+      </div>
+      
+      {/* Project Summary */}
+      <div className="gov-card" style={{ marginBottom: '16px', backgroundColor: 'var(--gov-slate-50)' }}>
+        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--gov-navy-900)', marginBottom: '12px' }}>PROJECT SUMMARY</div>
+        <div style={{ display: 'flex', gap: '24px', fontSize: '13px', flexWrap: 'wrap' }}>
+           <div><strong>Affected Landowners:</strong> {projectParcels.length}</div>
+           <div><strong>Affected Parcels:</strong> {projectParcels.length}</div>
+           <div><strong>Total Land Acquired:</strong> {project.landAcquiredAcres || project.landRequiredAcres} acres</div>
+           {isCalculated && (
+             <div style={{ color: 'var(--gov-blue-700)' }}><strong>Total Assessed Compensation:</strong> ₹{(totalAssessed / 100000).toFixed(2)} L</div>
+           )}
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="kpi-grid">
-        <MetricCard
-          label="Total Assessed"
-          value="₹120.4 Cr"
-          subtext="Under Section 3G Awards"
-          icon={<IndianRupee size={18} />}
-          highlight
-        />
-        <MetricCard
-          label="Compensation Paid"
-          value="₹95.2 Cr"
-          subtext="79.0% Transferred"
-          icon={<CheckCircle2 size={18} />}
-        />
-        <MetricCard
-          label="Pending Disbursement"
-          value="₹25.2 Cr"
-          subtext="18 Parcels in Scrutiny"
-          icon={<Clock size={18} />}
-        />
-        <MetricCard
-          label="Total Beneficiaries"
-          value="143"
-          subtext="Title Holders & Tenants"
-          icon={<Building size={18} />}
-        />
-      </div>
-
-      {/* Assessed vs Paid Progress Visual Card */}
-      <div className="gov-card">
-        <div className="gov-card-header">
-          <div className="gov-card-title">
-            <span>Disbursement Progress Overview</span>
-            <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--gov-slate-500)' }}>
-              e-Kuber Direct Benefit Transfer (DBT) Payout Efficiency
-            </span>
-          </div>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gov-green-700)' }}>
-            79.0% Completed
-          </span>
-        </div>
-
-        <div style={{ width: '100%', height: '12px', backgroundColor: 'var(--gov-slate-200)', borderRadius: '6px', overflow: 'hidden', display: 'flex' }}>
-          <div style={{ width: '79%', height: '100%', backgroundColor: 'var(--gov-green-600)' }} title="Paid: ₹95.2 Cr" />
-          <div style={{ width: '15%', height: '100%', backgroundColor: 'var(--gov-amber-500)' }} title="Processing: ₹18.1 Cr" />
-          <div style={{ width: '6%', height: '100%', backgroundColor: 'var(--gov-red-500)' }} title="Disputed/Failed: ₹7.1 Cr" />
-        </div>
-
-        <div style={{ display: 'flex', gap: '20px', marginTop: '10px', fontSize: '11.5px', color: 'var(--gov-slate-600)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '10px', height: '10px', backgroundColor: 'var(--gov-green-600)', borderRadius: '2px' }} />
-            <span>Disbursed & Reconciled (₹95.2 Cr)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '10px', height: '10px', backgroundColor: 'var(--gov-amber-500)', borderRadius: '2px' }} />
-            <span>Processing / Treasury Queue (₹18.1 Cr)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '10px', height: '10px', backgroundColor: 'var(--gov-red-500)', borderRadius: '2px' }} />
-            <span>Failed / Joint Khata Dispute (₹7.1 Cr)</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Bar */}
-      <div
-        style={{
-          backgroundColor: '#ffffff',
-          border: '1px solid var(--gov-slate-200)',
-          borderRadius: 'var(--radius-md)',
-          padding: '12px 16px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '12px',
-          alignItems: 'center'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: '1 1 240px' }}>
-          <Search size={14} color="var(--gov-slate-400)" />
-          <input
-            type="text"
-            className="gov-input"
-            style={{ width: '100%' }}
-            placeholder="Search Beneficiary name, Sy. No., Khata, Bank..."
-            value={localSearch}
-            onChange={(e) => setLocalSearch(e.target.value)}
+      {/* Map / Structure */}
+      <div className="gov-card" style={{ marginBottom: '16px' }}>
+        <div className="gov-card-title" style={{ marginBottom: '12px' }}><MapPin size={16}/> Project Map / Structure</div>
+        <div style={{ height: '300px', border: '1px solid var(--gov-slate-200)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+          <LeafletGisMap 
+            parcels={originalMapParcels}
+            selectedParcelId={selectedParcelId}
+            onSelectParcel={(id) => setSelectedParcelId(id)}
+            showLegend={false}
           />
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gov-slate-600)' }}>Village:</span>
-          <select
-            className="gov-select"
-            value={filterVillage}
-            onChange={(e) => setFilterVillage(e.target.value)}
-          >
-            <option value="ALL">All Villages</option>
-            <option value="Avverahalli">Avverahalli</option>
-            <option value="Kallugopahalli">Kallugopahalli</option>
-            <option value="Sheshagirihalli">Sheshagirihalli</option>
-          </select>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gov-slate-600)' }}>Payment Status:</span>
-          <select
-            className="gov-select"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="ALL">All Payment Statuses</option>
-            <option value="Paid">Paid</option>
-            <option value="Processing">Processing</option>
-            <option value="Pending Approval">Pending Approval</option>
-            <option value="Payment Failed">Payment Failed</option>
-          </select>
-        </div>
+        {selectedParcelId && (
+          <div style={{ marginTop: '12px', padding: '12px', backgroundColor: 'var(--gov-blue-50)', borderRadius: 'var(--radius-sm)' }}>
+             {(() => {
+                const sp = originalMapParcels.find(p => p.parcelId === selectedParcelId);
+                if (!sp) return null;
+                const hissa = getHissaByParcelId(sp.parcelId);
+                return (
+                  <div style={{ fontSize: '12px' }}>
+                    <div style={{ fontWeight: 700, marginBottom: '4px' }}>Selected Parcel Details:</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div><strong>Survey No:</strong> {sp.surveyNumber}</div>
+                      <div><strong>Village:</strong> {sp.village}</div>
+                      <div><strong>Total Land Area:</strong> {sp.areaAcres} acres</div>
+                      <div><strong>Landowner:</strong> {sp.ownerName}</div>
+                    </div>
+                    {hissa.length > 0 && (
+                      <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--gov-blue-100)' }}>
+                        <strong>Hissa Details:</strong> {hissa.map(h => `Hissa ${h.hissa_no} (${h.owner?.name || h.owner_id})`).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                );
+             })()}
+          </div>
+        )}
       </div>
 
-      {/* Compensation Data Table */}
-      <div className="gov-card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
+      {/* Affected Landowners */}
+      <div className="gov-card" style={{ marginBottom: '16px' }}>
+        <div className="gov-card-title" style={{ marginBottom: '12px' }}><Users size={16}/> Affected Landowners</div>
+        <div className="table-container">
           <table className="gov-table">
             <thead>
               <tr>
-                <th>Survey Number</th>
-                <th>Owner / Beneficiary</th>
-                <th>Village & Taluk</th>
-                <th>Khata Number</th>
-                <th style={{ textAlign: 'right' }}>Assessed Amount</th>
-                <th style={{ textAlign: 'right' }}>Approved Amount</th>
-                <th style={{ textAlign: 'right' }}>Paid Amount</th>
-                <th style={{ textAlign: 'right' }}>Pending Amount</th>
-                <th>Payment Status</th>
-                <th>Disbursement Ref</th>
-                <th style={{ textAlign: 'center' }}>Action</th>
+                <th>Landowner</th>
+                <th>Survey No.</th>
+                <th>Hissa</th>
+                <th style={{ textAlign: 'right' }}>Total Area</th>
+                <th style={{ textAlign: 'right' }}>Acquired Area</th>
+                <th>Status</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {filteredRecords.map((rec) => (
-                <tr key={rec.id}>
-                  <td style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>Sy. No. {rec.surveyNumber}</td>
-                  <td>
-                    <div style={{ fontWeight: 600, color: 'var(--gov-navy-900)' }}>{rec.ownerBeneficiary}</div>
-                    <div style={{ fontSize: '10.5px', color: 'var(--gov-slate-500)', fontFamily: 'var(--font-mono)' }}>
-                      {rec.bankAccountMasked} ({rec.ifscCode})
-                    </div>
-                  </td>
-                  <td>{rec.village}, {rec.taluk}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>{rec.khataNumber}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{(rec.assessedAmount / 100000).toFixed(2)} L</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{(rec.approvedAmount / 100000).toFixed(2)} L</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--gov-green-700)' }}>
-                    ₹{(rec.paidAmount / 100000).toFixed(2)} L
-                  </td>
-                  <td style={{ textAlign: 'right', fontWeight: 600, color: rec.pendingAmount > 0 ? 'var(--gov-amber-700)' : 'var(--gov-slate-500)' }}>
-                    ₹{(rec.pendingAmount / 100000).toFixed(2)} L
-                  </td>
-                  <td><StatusBadge status={rec.paymentStatus} size="sm" /></td>
-                  <td style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: 'var(--gov-slate-500)' }}>
-                    {rec.transactionReference || 'Awaiting Batch'}
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    {rec.paymentStatus !== 'Paid' ? (
-                      <button
-                        className="gov-btn gov-btn-primary gov-btn-sm"
-                        onClick={() => {
-                          setSelectedRecord(rec);
-                          setIsDisburseModalOpen(true);
-                        }}
-                      >
-                        Process Payout
+              {projectParcels.map(p => {
+                const hissa = getHissaByParcelId(p.parcelId);
+                const hasHissa = hissa.length > 0;
+                
+                return (
+                  <tr key={p.parcelId}>
+                    <td style={{ fontWeight: 600 }}>{p.ownerName}</td>
+                    <td>{p.surveyNumber}</td>
+                    <td>{hasHissa ? hissa.map(h => h.hissa_no).join(', ') : '-'}</td>
+                    <td style={{ textAlign: 'right' }}>{p.areaAcres} ac</td>
+                    <td style={{ textAlign: 'right' }}>{p.areaAcres} ac</td>
+                    <td><StatusBadge status="Compensation Pending" size="sm" /></td>
+                    <td>
+                      <button className="gov-btn gov-btn-secondary gov-btn-sm" onClick={() => setSelectedOwnerForCalc(p)}>
+                        View Details
                       </button>
-                    ) : (
-                      <button
-                        className="gov-btn gov-btn-secondary gov-btn-sm"
-                        onClick={() => alert(`Receipt Reference: ${rec.transactionReference}\nAward Order: ${rec.awardOrderNumber}`)}
-                      >
-                        Receipt
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Disburse Modal */}
-      <Modal
-        isOpen={isDisburseModalOpen}
-        onClose={() => setIsDisburseModalOpen(false)}
-        title="Sanction & Disburse Compensation"
-        subtitle={selectedRecord ? `Sy. No. ${selectedRecord.surveyNumber} · ${selectedRecord.ownerBeneficiary}` : ''}
-        footer={
-          <>
-            <button className="gov-btn gov-btn-secondary" onClick={() => setIsDisburseModalOpen(false)}>
-              Cancel
-            </button>
-            <button className="gov-btn gov-btn-primary" onClick={handleDisbursePayment}>
-              Authorize Bank Transfer (e-Kuber)
-            </button>
-          </>
-        }
-      >
-        {selectedRecord && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div
-              style={{
-                backgroundColor: 'var(--gov-slate-50)',
-                padding: '12px',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--gov-slate-200)',
-                fontSize: '11.5px',
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '8px'
-              }}
-            >
-              <div>
-                <span style={{ color: 'var(--gov-slate-500)' }}>Approved Amount:</span>
-                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--gov-navy-900)' }}>
-                  ₹{(selectedRecord.approvedAmount / 100000).toFixed(2)} Lakh
-                </div>
-              </div>
-              <div>
-                <span style={{ color: 'var(--gov-slate-500)' }}>Bank Account:</span>
-                <div style={{ fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
-                  {selectedRecord.bankAccountMasked}
-                </div>
-              </div>
-              <div>
-                <span style={{ color: 'var(--gov-slate-500)' }}>IFSC Code:</span>
-                <div style={{ fontWeight: 600 }}>{selectedRecord.ifscCode}</div>
-              </div>
-              <div>
-                <span style={{ color: 'var(--gov-slate-500)' }}>Award Order:</span>
-                <div style={{ fontWeight: 600 }}>{selectedRecord.awardOrderNumber}</div>
-              </div>
-            </div>
+      {/* Automatic Compensation Calculation */}
+      <div className="gov-card" style={{ marginBottom: '16px', backgroundColor: 'var(--gov-blue-50)', border: '1px solid var(--gov-blue-100)' }}>
+        <div className="gov-card-title" style={{ marginBottom: '12px', color: 'var(--gov-blue-800)' }}><IndianRupee size={16}/> Automatic Compensation Calculation</div>
+        <p style={{ fontSize: '12px', color: 'var(--gov-blue-700)', marginBottom: '12px' }}>
+          The system will calculate compensation for all affected landowners using the available land/project information and rules.
+        </p>
+        <button className="gov-btn gov-btn-primary" onClick={handleCalculateAll}>
+          Calculate Compensation for All
+        </button>
+      </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '3px' }}>
-                Payment Gateway Channel
-              </label>
-              <select className="gov-select" style={{ width: '100%' }} defaultValue="Direct RTGS">
-                <option value="Direct RTGS">RBI e-Kuber / State Treasury Direct RTGS</option>
-                <option value="Escrow">State Land Acquisition Escrow Account</option>
-                <option value="Court">Civil Court Reference Deposit (Dispute)</option>
-              </select>
-            </div>
-
-            <div
-              style={{
-                padding: '8px 12px',
-                backgroundColor: 'var(--gov-green-50)',
-                border: '1px solid var(--gov-green-100)',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '11px',
-                color: 'var(--gov-green-700)'
-              }}
-            >
-              Aadhaar & Bank Account DBT authentication verified via National Payments Corporation of India (NPCI) gateway.
-            </div>
+      {/* Beneficiaries List */}
+      {isCalculated && (
+        <div className="gov-card" style={{ marginBottom: '16px' }}>
+          <div className="gov-card-title" style={{ marginBottom: '12px' }}><Users size={16}/> COMPENSATION BENEFICIARIES</div>
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {calculatedParcels.map(p => (
+              <div key={p.parcelId} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', border: '1px solid var(--gov-slate-200)', borderRadius: '4px' }}>
+                 <div style={{ fontSize: '12px' }}>
+                   <div style={{ fontWeight: 700, color: 'var(--gov-navy-900)' }}>{p.ownerName}</div>
+                   <div style={{ color: 'var(--gov-slate-500)' }}>Survey {p.surveyNumber} • Acquired: {p.areaAcres} acres</div>
+                 </div>
+                 <div style={{ textAlign: 'right', fontSize: '12px' }}>
+                   <div style={{ fontWeight: 700, color: 'var(--gov-blue-700)' }}>Compensation: ₹{(p.total / 100000).toFixed(2)}L</div>
+                   <div style={{ color: 'var(--gov-slate-500)' }}>Status: Pending</div>
+                 </div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Documents */}
+      <div className="gov-card" style={{ marginBottom: '16px' }}>
+        <div className="gov-card-title" style={{ marginBottom: '12px' }}><FileText size={16}/> DOCUMENTS</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {projectDocs.length > 0 ? projectDocs.map(d => (
+            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+              <FileText size={14} color="var(--gov-slate-500)"/> 
+              <span style={{ fontWeight: 600 }}>{d.documentName}</span>
+              <span style={{ color: 'var(--gov-slate-400)' }}>({d.category})</span>
+            </div>
+          )) : (
+            <div style={{ fontSize: '12px', color: 'var(--gov-slate-500)' }}>No documents available.</div>
+          )}
+        </div>
+      </div>
+
+      {/* Payment / Credit Information */}
+      <div className="gov-card" style={{ marginBottom: '16px' }}>
+        <div className="gov-card-title" style={{ marginBottom: '12px' }}><Building2 size={16}/> PAYMENT STATUS</div>
+        <div style={{ fontSize: '12px' }}>
+          {projectComp.length > 0 ? (
+            <table className="gov-table">
+              <thead><tr><th>Beneficiary</th><th>Assessed</th><th>Status</th></tr></thead>
+              <tbody>
+                {projectComp.map(c => (
+                  <tr key={c.id}>
+                    <td>{c.ownerBeneficiary}</td>
+                    <td>₹{(c.assessedAmount / 100000).toFixed(2)}L</td>
+                    <td><StatusBadge status={c.paymentStatus} size="sm" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div style={{ color: 'var(--gov-slate-500)' }}>Payment Status: Not Available</div>
+          )}
+        </div>
+      </div>
+
+      {/* Approve / Reject Actions */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+        <button className="gov-btn gov-btn-secondary" style={{ backgroundColor: 'var(--gov-red-50)', color: 'var(--gov-red-700)', borderColor: 'var(--gov-red-200)' }} onClick={() => setIsRejectModalOpen(true)}>
+           <XCircle size={14} /> Reject
+        </button>
+        <button className="gov-btn gov-btn-primary" style={{ backgroundColor: 'var(--gov-green-600)' }} onClick={() => setIsApproveModalOpen(true)}>
+           <CheckCircle2 size={14} /> Approve
+        </button>
+      </div>
+
+      {/* Individual Details Modal (for Calculation Breakdown) */}
+      {selectedOwnerForCalc && (
+        <Modal
+          isOpen={true}
+          onClose={() => setSelectedOwnerForCalc(null)}
+          title="LANDOWNER DETAILS & COMPENSATION"
+        >
+          <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div><strong>Name:</strong> {selectedOwnerForCalc.ownerName}</div>
+            <div><strong>Owner ID:</strong> {selectedOwnerForCalc.parcelId}</div>
+            <div><strong>Survey Number:</strong> {selectedOwnerForCalc.surveyNumber}</div>
+            <div><strong>Hissa Number:</strong> {getHissaByParcelId(selectedOwnerForCalc.parcelId).length > 0 ? getHissaByParcelId(selectedOwnerForCalc.parcelId).map(h => h.hissa_no).join(', ') : '-'}</div>
+            <div><strong>Village:</strong> {selectedOwnerForCalc.village}</div>
+            <div><strong>Taluk:</strong> {selectedOwnerForCalc.taluk}</div>
+            <div><strong>Total Land:</strong> {selectedOwnerForCalc.areaAcres} acres</div>
+            <div><strong>Acquired Land:</strong> {selectedOwnerForCalc.areaAcres} acres</div>
+            <div><strong>Ownership:</strong> {getHissaByParcelId(selectedOwnerForCalc.parcelId).length > 1 ? 'Joint Owners' : 'Individual Owner'}</div>
+            
+            <hr style={{ margin: '12px 0', borderColor: 'var(--gov-slate-200)' }} />
+            <div style={{ fontWeight: 700, fontSize: '13px' }}>COMPENSATION ASSESSMENT</div>
+            
+            {isCalculated ? (() => {
+              const calc = calculatedParcels.find(p => p.parcelId === selectedOwnerForCalc.parcelId);
+              if (!calc) return <div>Not calculated yet.</div>;
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', backgroundColor: 'var(--gov-slate-50)', padding: '16px', borderRadius: '4px', border: '1px solid var(--gov-slate-200)' }}>
+                   <div><span style={{ color: 'var(--gov-slate-500)' }}>Land Rate:</span> <br/><span style={{fontWeight: 600}}>₹{calc.rate.toLocaleString()} / acre</span></div>
+                   <div><span style={{ color: 'var(--gov-slate-500)' }}>Acquired Area:</span> <br/><span style={{fontWeight: 600}}>{calc.areaAcres} acres</span></div>
+                   <div><span style={{ color: 'var(--gov-slate-500)' }}>Base Land Value:</span> <br/><span style={{fontWeight: 600}}>₹{calc.baseValue.toLocaleString()}</span></div>
+                   <div><span style={{ color: 'var(--gov-slate-500)' }}>Solatium:</span> <br/><span style={{fontWeight: 600}}>₹{calc.solatium.toLocaleString()}</span></div>
+                   <div><span style={{ color: 'var(--gov-slate-500)' }}>Other Components:</span> <br/><span style={{fontWeight: 600}}>₹{calc.otherComps.toLocaleString()}</span></div>
+                   <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--gov-slate-200)', marginTop: '8px', paddingTop: '12px' }}>
+                     <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--gov-navy-900)' }}>FINAL COMPENSATION: ₹{calc.total.toLocaleString()}</div>
+                   </div>
+                </div>
+              );
+            })() : (
+              <div style={{ color: 'var(--gov-slate-500)' }}>Please calculate compensation for all first to see the breakdown.</div>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* Approve/Reject Modals */}
+      <Modal isOpen={isRejectModalOpen} onClose={() => setIsRejectModalOpen(false)} title="Reject Financial Assessment">
+        <div style={{ fontSize: '12px', marginBottom: '8px' }}>Reason:</div>
+        <textarea 
+          className="gov-input" 
+          style={{ width: '100%', minHeight: '80px', marginBottom: '16px' }}
+          value={rejectReason}
+          onChange={(e) => setRejectReason(e.target.value)}
+        />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          <button className="gov-btn gov-btn-secondary" onClick={() => setIsRejectModalOpen(false)}>Cancel</button>
+          <button className="gov-btn gov-btn-primary" style={{ backgroundColor: 'var(--gov-red-600)' }} onClick={handleReject}>Confirm Rejection</button>
+        </div>
       </Modal>
+
+      <Modal isOpen={isApproveModalOpen} onClose={() => setIsApproveModalOpen(false)} title="Approve Financial Assessment?">
+        <div style={{ fontSize: '12px', marginBottom: '16px' }}>
+          {isCalculated ? (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: 'var(--gov-slate-50)', padding: '12px', borderRadius: '4px', border: '1px solid var(--gov-slate-200)' }}>
+                <div><strong>Total Compensation:</strong> ₹{(totalAssessed / 100000).toFixed(2)} Lakh</div>
+                <div><strong>Beneficiaries:</strong> {calculatedParcels.length}</div>
+              </div>
+            </>
+          ) : (
+             <div style={{ color: 'var(--gov-amber-700)', fontWeight: 600 }}>Please calculate compensation before approving.</div>
+          )}
+          <p style={{ marginTop: '12px', color: 'var(--gov-slate-600)' }}>After approval, this project will be passed to the District Officer for the next stage.</p>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          <button className="gov-btn gov-btn-secondary" onClick={() => setIsApproveModalOpen(false)}>Cancel</button>
+          <button className="gov-btn gov-btn-primary" style={{ backgroundColor: 'var(--gov-green-600)' }} onClick={handleApprove} disabled={!isCalculated || isApproving}>
+            {isApproving ? 'Approving...' : 'Confirm Approval'}
+          </button>
+        </div>
+      </Modal>
+
+    </div>
+  );
+};
+
+export const CompensationPage: React.FC = () => {
+  const {
+    projects,
+    searchQuery: globalSearch,
+  } = useApp();
+
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [localSearch, setLocalSearch] = useState<string>('');
+  
+  // Take all projects from the database collection (Project_Approval_LA) and show them
+  const approvedProjects = projects.filter((p) => !p.id.startsWith('proj-'));
+
+  const searchKeyword = (localSearch || globalSearch).toLowerCase().trim();
+  const filteredProjects = approvedProjects.filter((p) => 
+    !searchKeyword || p.name.toLowerCase().includes(searchKeyword) || p.code.toLowerCase().includes(searchKeyword)
+  );
+
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
+
+  if (selectedProject) {
+    return <FinancialProjectDetails project={selectedProject} onBack={() => setSelectedProjectId(null)} />;
+  }
+
+  return (
+    <div className="page-body">
+      <div className="page-header-row">
+        <div>
+          <h1 className="page-title">Approved Projects</h1>
+          <p className="page-subtitle">
+            Projects approved by the Land Acquisition Officer and awaiting financial assessment.
+          </p>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px', maxWidth: '400px' }}>
+        <Search size={14} color="var(--gov-slate-400)" />
+        <input
+          type="text"
+          className="gov-input"
+          style={{ width: '100%' }}
+          placeholder="Search projects..."
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+        />
+      </div>
+
+      <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+        {filteredProjects.map(proj => (
+          <div key={proj.id} className="gov-card" style={{ display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--gov-navy-900)', marginBottom: '8px' }}>
+              {proj.name}
+            </h3>
+            <div style={{ fontSize: '11px', color: 'var(--gov-slate-500)', marginBottom: '12px' }}>
+              Project ID: {proj.code}
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--gov-slate-600)' }}>Agency:</span>
+                <span style={{ fontWeight: 600 }}>{proj.agencyName || proj.implementingAgency}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--gov-slate-600)' }}>District:</span>
+                <span style={{ fontWeight: 600 }}>{proj.district}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--gov-slate-600)' }}>Taluk:</span>
+                <span style={{ fontWeight: 600, textAlign: 'right' }}>{proj.taluks.join(', ')}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--gov-slate-600)' }}>Required Land:</span>
+                <span style={{ fontWeight: 600 }}>{proj.landRequiredAcres} acres</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--gov-slate-600)' }}>Affected Landowners:</span>
+                <span style={{ fontWeight: 600 }}>{proj.affectedFamiliesCount || 7}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                <span style={{ color: 'var(--gov-slate-600)' }}>LAO Status:</span>
+                <span style={{ fontWeight: 700, color: 'var(--gov-green-700)' }}>Approved</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--gov-slate-600)' }}>Financial Status:</span>
+                <span style={{ fontWeight: 700, color: (proj as any).financialStatus === 'Approved' ? 'var(--gov-green-700)' : 'var(--gov-amber-700)' }}>{(proj as any).financialStatus === 'Approved' ? 'Approved' : 'Pending'}</span>
+              </div>
+            </div>
+
+            <button 
+              className="gov-btn gov-btn-primary" 
+              style={{ marginTop: '16px', width: '100%', justifyContent: 'center' }}
+              onClick={() => setSelectedProjectId(proj.id)}
+            >
+              View Project
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
