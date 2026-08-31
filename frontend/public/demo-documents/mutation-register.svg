@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1050" width="100%" height="100%" style="background-color: #fcfcf9; font-family: Arial, sans-serif;">
+  <style>
+    .title { font-size: 20px; font-weight: bold; fill: #1e293b; text-anchor: middle; }
+    .subtitle { font-size: 14px; font-weight: bold; fill: #334155; text-anchor: middle; }
+    .disclaimer { font-size: 18px; font-weight: bold; fill: #dc2626; text-anchor: middle; }
+    .label { font-size: 12px; font-weight: bold; fill: #475569; }
+    .value { font-size: 12px; fill: #0f172a; }
+    .header-bg { fill: #f1f5f9; stroke: #cbd5e1; }
+    .table-border { stroke: #cbd5e1; stroke-width: 1; fill: none; }
+    .watermark { font-size: 32px; font-weight: 900; fill: rgba(220, 38, 38, 0.12); text-anchor: middle; }
+  </style>
+
+  <rect x="20" y="20" width="760" height="1010" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
+  <rect x="20" y="20" width="760" height="40" fill="#fee2e2" stroke="#fca5a5" stroke-width="1" />
+  <text x="400" y="46" class="disclaimer">⚠️ SAMPLE — NOT A GOVERNMENT DOCUMENT ⚠️</text>
+
+  <text x="400" y="90" class="title">REVENUE DEPARTMENT · GOVERNMENT OF KARNATAKA</text>
+  <text x="400" y="115" class="subtitle">MUTATION EXTRACT REGISTER (JMR / FORM NO. 12)</text>
+  <line x1="40" y1="130" x2="760" y2="130" stroke="#0f172a" stroke-width="1.5" />
+
+  <rect x="40" y="150" width="720" height="100" class="header-bg" />
+  <text x="60" y="175" class="label">MUTATION ORDER NO:</text>
+  <text x="210" y="175" class="value" font-weight="bold">MR No. 45/2018-19</text>
+
+  <text x="400" y="175" class="label">MUTATION DATE:</text>
+  <text x="520" y="175" class="value">14-OCT-2018</text>
+
+  <text x="60" y="210" class="label">SURVEY NUMBER:</text>
+  <text x="180" y="210" class="value" font-weight="bold">Sy. No. 142 / Hissa 3A</text>
+
+  <text x="400" y="210" class="label">VILLAGE &amp; TALUK:</text>
+  <text x="530" y="210" class="value">Kenjaru, Mangaluru Taluk</text>
+
+  <text x="40" y="290" class="subtitle" text-anchor="start">MUTATION PROCEEDINGS &amp; TITLE TRANSITION RECORD</text>
+  <rect x="40" y="305" width="720" height="380" class="table-border" />
+  <line x1="40" y1="340" x2="760" y2="340" stroke="#cbd5e1" stroke-width="1" />
+
+  <text x="60" y="328" class="label">ENTRY NO</text>
+  <text x="180" y="328" class="label">NATURE OF TRANSITION</text>
+  <text x="420" y="328" class="label">TRANSFEROR / SELLER</text>
+  <text x="620" y="328" class="label">TRANSFEREE / BUYER</text>
+
+  <text x="60" y="370" class="value">1</text>
+  <text x="180" y="370" class="value">Inheritance / Succession (Varisu)</text>
+  <text x="420" y="370" class="value">Late Shankara Bhat</text>
+  <text x="620" y="370" class="value">Parvathi Amma &amp; Ramesh Bhat</text>
+
+  <text x="60" y="420" class="label">ORDER DETAILS &amp; TAHASILDAR REASONING:</text>
+  <text x="60" y="445" class="value">Application submitted by Smt. Parvathi Amma regarding the intestate succession of land in Sy No. 142/3A.</text>
+  <text x="60" y="465" class="value">Public 30-day notice issued under Sec 129(2) of Karnataka Land Revenue Act, 1964. No objections received.</text>
+  <text x="60" y="485" class="value">Genealogical tree verified by Village Accountant and Revenue Inspector. Mutation certified in Bhoomi DB.</text>
+
+  <rect x="40" y="720" width="720" height="150" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" />
+  <text x="60" y="750" class="label">CERTIFYING AUTHORITY:</text>
+  <text x="60" y="775" class="value">Special Tahasildar (Bhoomi Mutation Cell), Mangaluru</text>
+  <text x="60" y="795" class="value">Status: FINALIZED &amp; MUTATED IN LAND REGISTRY</text>
+
+  <g transform="rotate(-30 400 500)">
+    <text x="400" y="480" class="watermark">DEMO DOCUMENT</text>
+    <text x="400" y="530" class="watermark">NOT OFFICIAL GOVERNMENT RECORD</text>
+  </g>
+
+  <rect x="20" y="990" width="760" height="40" fill="#fee2e2" stroke="#fca5a5" stroke-width="1" />
+  <text x="400" y="1015" class="disclaimer">⚠️ SAMPLE — NOT A GOVERNMENT DOCUMENT ⚠️</text>
+</svg>

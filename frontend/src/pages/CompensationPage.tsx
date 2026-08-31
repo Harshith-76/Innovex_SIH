@@ -23,7 +23,9 @@ export const CompensationPage: React.FC = () => {
     compensationRecords,
     updateCompensationStatus,
     activeProject,
-    searchQuery: globalSearch
+    searchQuery: globalSearch,
+    approvedProjectsLA,
+    currentRole
   } = useApp();
 
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -145,6 +147,82 @@ export const CompensationPage: React.FC = () => {
             <span style={{ width: '10px', height: '10px', backgroundColor: 'var(--gov-red-500)', borderRadius: '2px' }} />
             <span>Failed / Joint Khata Dispute (₹7.1 Cr)</span>
           </div>
+        </div>
+      </div>
+
+      {/* APPROVED PROJECTS QUEUE FOR FINANCIAL OFFICER (FETCHED FROM lams_db.Project_Approval_LA) */}
+      <div className="gov-card" style={{ borderLeft: '4px solid var(--gov-green-600)' }}>
+        <div className="gov-card-header">
+          <div className="gov-card-title">
+            <Building size={16} color="var(--gov-green-700)" />
+            <span>APPROVED PROJECTS FOR FINANCIAL DISBURSEMENT (from lams_db.Project_Approval_LA)</span>
+          </div>
+          <span style={{ fontSize: '11px', color: 'var(--gov-slate-500)' }}>
+            Source of Truth: MongoDB Collection <code>Project_Approval_LA</code> ({approvedProjectsLA.length} Approved Projects)
+          </span>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table className="gov-table">
+            <thead>
+              <tr>
+                <th>Project Code</th>
+                <th>Project Title</th>
+                <th>Implementing Agency</th>
+                <th>District</th>
+                <th>Land Req / Selected</th>
+                <th>Parcels</th>
+                <th>Assessed Comp.</th>
+                <th>Approved By (Minister/SLAO)</th>
+                <th>Approval Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {approvedProjectsLA.length === 0 ? (
+                <tr>
+                  <td colSpan={10} style={{ textAlign: 'center', padding: '24px', color: 'var(--gov-slate-500)', fontSize: '12px' }}>
+                    No approved projects currently found in <code>lams_db.Project_Approval_LA</code>. Proposals approved by the Land Acquisition Officer will appear here automatically.
+                  </td>
+                </tr>
+              ) : (
+                approvedProjectsLA.map((ap: any) => (
+                  <tr key={ap.id || ap.sourceProjectId} style={{ backgroundColor: '#f0fdf4' }}>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--gov-blue-700)' }}>
+                      {ap.projectCode || ap.code}
+                    </td>
+                    <td style={{ fontWeight: 600, color: 'var(--gov-navy-900)' }}>
+                      {ap.projectName || ap.name}
+                    </td>
+                    <td style={{ fontSize: '11.5px' }}>
+                      {ap.implementingAgency || ap.agencyName || 'KSHIP'}
+                    </td>
+                    <td style={{ fontWeight: 600 }}>{ap.district}</td>
+                    <td style={{ fontSize: '11.5px' }}>
+                      <strong>{ap.landRequiredAcres} Ac</strong> / {ap.landAcquiredAcres || ap.selectedLandAcres || 0} Ac
+                    </td>
+                    <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                      {ap.selectedParcelCount || ap.selectedParcelIds?.length || 0}
+                    </td>
+                    <td style={{ fontWeight: 700, color: 'var(--gov-navy-900)' }}>
+                      ₹ {ap.estimatedCompensationCr || ap.totalCompensationAssessedCr || 0} Cr
+                    </td>
+                    <td style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--gov-navy-800)' }}>
+                      {ap.approvedBy || ap.verification?.reviewedBy || 'Shri R. K. Hegde, SLAO'}
+                    </td>
+                    <td style={{ fontSize: '11px', color: 'var(--gov-slate-500)' }}>
+                      {ap.approvedAt ? new Date(ap.approvedAt).toLocaleString('en-IN') : 'Just now'}
+                    </td>
+                    <td>
+                      <span style={{ backgroundColor: '#ecfdf5', color: '#047857', fontSize: '10.5px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px' }}>
+                        FORWARDED TO FINANCE
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 

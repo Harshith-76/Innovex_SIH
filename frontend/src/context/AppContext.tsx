@@ -11,7 +11,8 @@ import {
   AdminUser,
   ParcelStatus,
   CompensationStatus,
-  HissaRecord
+  HissaRecord,
+  UserRole
 } from '../types';
 import {
   INITIAL_PROJECTS,
@@ -30,6 +31,8 @@ import {
   fetchHissaRecords,
   createProject,
   updateProject as updateProjectApi,
+  fetchApprovedProjectsLA,
+  approveProjectLA,
   ParcelQueryParams,
   CreateProjectRequest
 } from '../services/api';
@@ -52,6 +55,8 @@ export type PageId =
 export type JurisdictionLevel = 'National' | 'State' | 'District' | 'Project';
 
 interface AppContextType {
+  currentRole: UserRole;
+  setCurrentRole: (role: UserRole) => void;
   currentPage: PageId;
   setCurrentPage: (page: PageId) => void;
   selectedProjectId: string;
@@ -71,6 +76,7 @@ interface AppContextType {
   
   // Data Entities
   projects: LandAcquisitionProject[];
+  approvedProjectsLA: any[];
   parcels: LandParcel[];
   isParcelsLoading: boolean;
   parcelsError: string | null;
@@ -104,12 +110,14 @@ interface AppContextType {
   openProjectDetail: (projectId: string) => void;
   openProjectRoute: (projectId: string) => void;
   updateProjectRoute: (projectId: string, routeData: Partial<LandAcquisitionProject>) => void;
+  updateProjectVerification: (projectId: string, updates: Partial<LandAcquisitionProject>) => Promise<void>;
   navigateToParcelInGis: (parcelId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [currentRole, setCurrentRole] = useState<UserRole>('Land Acquisition Officer');
   const [currentPage, setCurrentPage] = useState<PageId>('dashboard');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('proj-001');
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
@@ -121,6 +129,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Domain state
   const [projects, setProjects] = useState<LandAcquisitionProject[]>(INITIAL_PROJECTS);
+  const [approvedProjectsLA, setApprovedProjectsLA] = useState<any[]>([]);
   const [parcels, setParcels] = useState<LandParcel[]>([]);
   const [hissaRecords, setHissaRecords] = useState<HissaRecord[]>([]);
   const [hissaByParcel, setHissaByParcel] = useState<Record<string, HissaRecord[]>>({});
@@ -236,6 +245,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           routeLengthKm: p.routeLengthKm || p.proposedLengthKm || undefined,
           rowWidthM: p.rowWidthM || undefined,
           routeStatus: p.routeStatus || undefined,
+          submittedAt: p.submittedAt || (p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN') : undefined),
+          verification: p.verification || undefined,
           stages: [
             { stage: 'Proposal', status: 'In Progress', targetDate: '2026-10-31', responsibleAuthority: p.agencyName || 'PIU Director', documentsCount: 1, pendingActionsCount: 1, notes: 'Land selection completed' },
             { stage: 'Verification', status: 'Pending', targetDate: '2026-12-31', responsibleAuthority: 'SLAO', documentsCount: 0, pendingActionsCount: 2, notes: 'JMS pending' }
@@ -254,9 +265,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const loadApprovedProjectsLA = async () => {
+    try {
+      const approved = await fetchApprovedProjectsLA();
+      if (Array.isArray(approved)) {
+        setApprovedProjectsLA(approved);
+      }
+    } catch (err) {
+      console.warn('[AppContext] Could not fetch Project_Approval_LA:', err);
+    }
+  };
+
   useEffect(() => {
     reloadParcels();
     loadProjectsFromApi();
+    loadApprovedProjectsLA();
+
+    const intervalId = setInterval(() => {
+      loadProjectsFromApi();
+      loadApprovedProjectsLA();
+    }, 8000); // Poll every 8s for new proposal arrivals & approvals
+
+    return () => clearInterval(intervalId);
   }, []);
 
   const createProjectRecord = async (projectData: CreateProjectRequest): Promise<LandAcquisitionProject> => {
@@ -345,6 +375,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await updateProjectApi(projectId, routeData);
     } catch (err) {
       console.warn('[AppContext] Could not persist route update to API:', err);
+    }
+  };
+
+  const updateProjectVerification = async (projectId: string, updates: Partial<LandAcquisitionProject>) => {
+    setProjects(prev =>
+      prev.map(p => {
+        if (p.id === projectId) {
+          return {
+            ...p,
+            ...updates,
+            lastUpdated: 'Just now (Verification Updated)'
+          };
+        }
+        return p;
+      })
+    );
+
+    try {
+      if (
+        updates.status === 'FORWARDED_TO_FINANCIAL_OFFICER' ||
+        updates.status === 'VERIFIED' ||
+        updates.verification?.status === 'FORWARDED_TO_FINANCIAL_OFFICER' ||
+        updates.verification?.decision === 'VERIFIED'
+      ) {
+        await approveProjectLA(projectId, updates.verification || updates);
+        await loadApprovedProjectsLA();
+      } else {
+        await updateProjectApi(projectId, updates);
+      }
+    } catch (err) {
+      console.warn('[AppContext] Could not persist verification update to API:', err);
     }
   };
 
@@ -490,6 +551,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         searchQuery,
         setSearchQuery,
         projects,
+        approvedProjectsLA,
         parcels,
         isParcelsLoading,
         parcelsError,
@@ -519,7 +581,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         openProjectDetail,
         openProjectRoute,
         updateProjectRoute,
-        navigateToParcelInGis
+        updateProjectVerification,
+        navigateToParcelInGis,
+        currentRole,
+        setCurrentRole
       }}
     >
       {children}

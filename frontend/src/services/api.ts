@@ -177,6 +177,40 @@ export async function updateProject(id: string, data: Record<string, any>): Prom
 }
 
 /**
+ * Fetches approved projects from lams_db.Project_Approval_LA collection.
+ */
+export async function fetchApprovedProjectsLA(): Promise<any[]> {
+  const response = await fetch(`${API_BASE_URL}/projects/approved-la`);
+
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.error || `Failed to fetch approved projects: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Saves explicit approval and snapshot in lams_db.Project_Approval_LA.
+ */
+export async function approveProjectLA(id: string, verificationData: Record<string, any>): Promise<any> {
+  const response = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(id.trim())}/approve-la`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(verificationData),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.error || `Failed to approve project: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Fetches all Hissa records with resolved Owner information.
  */
 export async function fetchHissaRecords(params?: {

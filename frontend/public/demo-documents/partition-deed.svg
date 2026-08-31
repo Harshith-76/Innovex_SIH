@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1050" width="100%" height="100%" style="background-color: #fcfcf9; font-family: Arial, sans-serif;">
+  <style>
+    .title { font-size: 20px; font-weight: bold; fill: #1e293b; text-anchor: middle; }
+    .subtitle { font-size: 14px; font-weight: bold; fill: #334155; text-anchor: middle; }
+    .disclaimer { font-size: 18px; font-weight: bold; fill: #dc2626; text-anchor: middle; }
+    .label { font-size: 12px; font-weight: bold; fill: #475569; }
+    .value { font-size: 12px; fill: #0f172a; }
+    .header-bg { fill: #f1f5f9; stroke: #cbd5e1; }
+    .table-border { stroke: #cbd5e1; stroke-width: 1; fill: none; }
+    .watermark { font-size: 32px; font-weight: 900; fill: rgba(220, 38, 38, 0.12); text-anchor: middle; }
+  </style>
+
+  <rect x="20" y="20" width="760" height="1010" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
+  <rect x="20" y="20" width="760" height="40" fill="#fee2e2" stroke="#fca5a5" stroke-width="1" />
+  <text x="400" y="46" class="disclaimer">⚠️ SAMPLE — NOT A GOVERNMENT DOCUMENT ⚠️</text>
+
+  <text x="400" y="90" class="title">DEPARTMENT OF STAMPS &amp; REGISTRATION · GOVT OF KARNATAKA</text>
+  <text x="400" y="115" class="subtitle">REGISTERED FAMILY PARTITION DEED EXTRACT (FORM NO. 1)</text>
+  <line x1="40" y1="130" x2="760" y2="130" stroke="#0f172a" stroke-width="1.5" />
+
+  <rect x="40" y="150" width="720" height="110" class="header-bg" />
+  <text x="60" y="175" class="label">REGISTRATION NO:</text>
+  <text x="190" y="175" class="value" font-weight="bold">BK-I-14209/2021</text>
+
+  <text x="400" y="175" class="label">DATE OF REGISTRATION:</text>
+  <text x="560" y="175" class="value">22-NOV-2021</text>
+
+  <text x="60" y="210" class="label">SUB-REGISTRAR OFFICE:</text>
+  <text x="210" y="210" class="value">Sub-Registrar Office, Mangaluru City</text>
+
+  <text x="60" y="245" class="label">SCHEDULE PROPERTY:</text>
+  <text x="210" y="245" class="value" font-weight="bold">Sy No. 142/3A, Kenjaru Village (4.625 Acres)</text>
+
+  <text x="40" y="300" class="subtitle" text-anchor="start">CO-SHARERS &amp; SCHEDULE ALLOTMENT DETAILS</text>
+  <rect x="40" y="315" width="720" height="360" class="table-border" />
+  
+  <text x="60" y="345" class="label">SCHEDULE A (ALLOTTED TO PARVATHI AMMA):</text>
+  <text x="60" y="370" class="value">• Extent: 2 Acres 10 Guntas in Western Boundaries of Sy. No. 142/3A.</text>
+  <text x="60" y="390" class="value">• Right of ingress/egress preserved along northern 12ft cart track.</text>
+
+  <text x="60" y="430" class="label">SCHEDULE B (ALLOTTED TO K. RAMESH BHAT):</text>
+  <text x="60" y="455" class="value">• Extent: 2 Acres 15 Guntas in Eastern Boundaries of Sy. No. 142/3A.</text>
+  <text x="60" y="475" class="value">• Includes open well and pump house share.</text>
+
+  <rect x="40" y="700" width="720" height="150" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" />
+  <text x="60" y="730" class="label">REGISTRATION ENDORSEMENT:</text>
+  <text x="60" y="755" class="value">Registered in Book 1, Volume 4120, Pages 102 to 118 at SRO Mangaluru.</text>
+  <text x="60" y="775" class="value">Stamp Duty Paid: ₹ 15,400/- · Registration Fee Paid: ₹ 3,100/-</text>
+
+  <g transform="rotate(-30 400 500)">
+    <text x="400" y="480" class="watermark">DEMO DOCUMENT</text>
+    <text x="400" y="530" class="watermark">NOT OFFICIAL GOVERNMENT RECORD</text>
+  </g>
+
+  <rect x="20" y="990" width="760" height="40" fill="#fee2e2" stroke="#fca5a5" stroke-width="1" />
+  <text x="400" y="1015" class="disclaimer">⚠️ SAMPLE — NOT A GOVERNMENT DOCUMENT ⚠️</text>
+</svg>

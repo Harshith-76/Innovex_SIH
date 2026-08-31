@@ -27,7 +27,23 @@ export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 
 export type AlertSeverity = 'Critical' | 'Warning' | 'Information';
 
+export type ProjectWorkflowStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'UNDER_VERIFICATION'
+  | 'RETURNED_FOR_CORRECTION'
+  | 'RESUBMITTED'
+  | 'VERIFIED'
+  | 'FORWARDED_TO_FINANCIAL_OFFICER'
+  | 'REJECTED'
+  | 'In Progress'
+  | 'Approved'
+  | 'Delayed'
+  | 'Completed';
+
 export type UserRole =
+  | 'Land Acquisition Officer'
+  | 'Financial Officer / Finance Minister'
   | 'Central Ministry'
   | 'State Government'
   | 'District Administration'
@@ -155,7 +171,17 @@ export interface LandAcquisitionProject {
   landAcquiredAcres: number;
   progressPercentage: number;
   currentStage: AcquisitionStage;
-  status: 'In Progress' | 'Approved' | 'Delayed' | 'Completed';
+  status: ProjectWorkflowStatus;
+  workflowStatus?: ProjectWorkflowStatus;
+  submittedAt?: string;
+  verification?: {
+    status?: ProjectWorkflowStatus;
+    officerRemarks?: string;
+    checklist?: Record<string, boolean>;
+    reviewedAt?: string;
+    reviewedBy?: string;
+    decision?: 'VERIFIED' | 'RETURNED' | 'REJECTED';
+  };
   riskScore: number; // 0 - 100
   riskLevel: RiskLevel;
   primaryRiskFactor: string;

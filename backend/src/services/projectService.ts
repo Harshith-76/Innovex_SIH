@@ -1,5 +1,5 @@
 import { Filter, ObjectId, Document } from 'mongodb';
-import { getProjectsCollection } from '../config/database.js';
+import { getProjectsCollection, getParcelsCollection, getProjectApprovalLACollection } from '../config/database.js';
 
 export interface ProjectDocument extends Document {
   _id: ObjectId;
@@ -37,6 +37,17 @@ export interface ProjectDocument extends Document {
   proposedLengthKm?: number;
   rowWidthM?: number;
   routeStatus?: string;
+  submittedAt?: string;
+  reviewedAt?: string;
+  verifiedAt?: string;
+  verification?: {
+    status?: string;
+    officerRemarks?: string;
+    checklist?: Record<string, boolean>;
+    reviewedAt?: string;
+    reviewedBy?: string;
+    decision?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -127,7 +138,8 @@ export async function createProject(input: CreateProjectInput): Promise<any> {
     selectedParcelCount: selectedParcelIds.length,
     progressPercentage: input.progressPercentage !== undefined ? Number(input.progressPercentage) : 0,
     currentStage: input.currentStage || 'Proposal',
-    status: input.status || 'In Progress',
+    status: input.status || 'SUBMITTED',
+    submittedAt: now.toISOString(),
     riskScore: 20,
     riskLevel: 'Low',
     primaryRiskFactor: 'Cadastral Parcel Acquisition',
@@ -213,6 +225,7 @@ export async function getProjectById(id: string): Promise<any | null> {
 
 /**
  * Updates an existing project document in the MongoDB projects collection.
+ * Automatically saves a complete approved snapshot to lams_db.Project_Approval_LA if forwarded to financial officer.
  */
 export async function updateProject(id: string, updates: Partial<ProjectDocument>): Promise<any | null> {
   const collection = getProjectsCollection<ProjectDocument>();
@@ -238,5 +251,128 @@ export async function updateProject(id: string, updates: Partial<ProjectDocument
     return null;
   }
 
-  return formatProject(result as ProjectDocument);
+  const formatted = formatProject(result as ProjectDocument);
+
+  // If status is updated to FORWARDED_TO_FINANCIAL_OFFICER or decision is VERIFIED, save complete snapshot to Project_Approval_LA
+  if (
+    updates.status === 'FORWARDED_TO_FINANCIAL_OFFICER' ||
+    updates.status === 'VERIFIED' ||
+    updates.verification?.status === 'FORWARDED_TO_FINANCIAL_OFFICER' ||
+    updates.verification?.decision === 'VERIFIED'
+  ) {
+    try {
+      await saveProjectApprovalLA(id, updates.verification);
+    } catch (err) {
+      console.error('[projectService] Failed to auto-save Project_Approval_LA snapshot:', err);
+    }
+  }
+
+  return formatted;
+}
+
+/**
+ * Saves or updates a COMPLETE approved project snapshot in lams_db.Project_Approval_LA.
+ * Duplicate approvals for the same project are prevented by using `sourceProjectId` upsert.
+ */
+export async function saveProjectApprovalLA(projectId: string, verificationData?: any): Promise<any> {
+  const projectsCol = getProjectsCollection<ProjectDocument>();
+  const parcelsCol = getParcelsCollection();
+  const approvalCol = getProjectApprovalLACollection();
+
+  const trimmedId = projectId.trim();
+  let projectDoc: ProjectDocument | null = null;
+
+  if (ObjectId.isValid(trimmedId)) {
+    projectDoc = await projectsCol.findOne({ _id: new ObjectId(trimmedId) });
+  }
+  if (!projectDoc) {
+    projectDoc = await projectsCol.findOne({ code: trimmedId });
+  }
+  if (!projectDoc) {
+    throw new Error(`Cannot create approval snapshot: Project not found with ID/code: ${projectId}`);
+  }
+
+  // Fetch full associated parcel documents from parcels collection for selectedParcelIds
+  let selectedParcelDocs: any[] = [];
+  if (Array.isArray(projectDoc.selectedParcelIds) && projectDoc.selectedParcelIds.length > 0) {
+    selectedParcelDocs = await parcelsCol
+      .find({ parcelId: { $in: projectDoc.selectedParcelIds } })
+      .toArray();
+  }
+
+  const now = new Date();
+  const sourceProjId = projectDoc._id.toString();
+
+  const snapshotDoc = {
+    sourceProjectId: sourceProjId,
+    projectCode: projectDoc.code,
+    projectName: projectDoc.name,
+    projectType: projectDoc.projectType || 'Highway Infrastructure',
+    parentAuthority: projectDoc.parentAuthority || 'Public Works Department, Govt of Karnataka',
+    agencyName: projectDoc.agencyName || projectDoc.implementingAgency || 'KSHIP',
+    agencyType: projectDoc.agencyType || 'State Authority',
+    department: projectDoc.department || 'Public Works Department',
+    implementingAgency: projectDoc.implementingAgency || projectDoc.agencyName || 'KSHIP',
+    state: projectDoc.state || 'Karnataka',
+    district: projectDoc.district,
+    taluks: projectDoc.taluks || [projectDoc.district],
+    landRequiredAcres: projectDoc.landRequiredAcres,
+    landAcquiredAcres: projectDoc.landAcquiredAcres || projectDoc.selectedLandAcres || 0,
+    selectedLandAcres: projectDoc.selectedLandAcres || projectDoc.landAcquiredAcres || 0,
+    selectedParcelCount: projectDoc.selectedParcelCount || (projectDoc.selectedParcelIds ? projectDoc.selectedParcelIds.length : 0),
+    estimatedCompensationCr: projectDoc.estimatedCompensationCr,
+    totalCompensationAssessedCr: projectDoc.totalCompensationAssessedCr || projectDoc.estimatedCompensationCr || 0,
+    totalCompensationPaidCr: projectDoc.totalCompensationPaidCr || 0,
+    scope: projectDoc.scope || projectDoc.description || '',
+    description: projectDoc.description || projectDoc.scope || '',
+    selectedParcelIds: projectDoc.selectedParcelIds || [],
+    selectedParcels: selectedParcelDocs, // full parcel objects with survey numbers, area, village, owners, geometries
+    routeWaypoints: projectDoc.routeWaypoints || [],
+    routeLengthKm: projectDoc.routeLengthKm || projectDoc.proposedLengthKm || 0,
+    proposedLengthKm: projectDoc.proposedLengthKm || projectDoc.routeLengthKm || 0,
+    rowWidthM: projectDoc.rowWidthM || 30,
+    routeStatus: projectDoc.routeStatus || 'APPROVED',
+    stages: projectDoc.stages || [],
+    villages: projectDoc.villages || [],
+    submittedAt: projectDoc.submittedAt || projectDoc.createdAt,
+    verification: projectDoc.verification || verificationData || {},
+    officerRemarks: verificationData?.officerRemarks || projectDoc.verification?.officerRemarks || '',
+    verificationChecklist: verificationData?.checklist || projectDoc.verification?.checklist || {},
+    approvalStatus: 'APPROVED',
+    forwardedTo: 'FINANCIAL_OFFICER',
+    approvedBy: verificationData?.reviewedBy || projectDoc.verification?.reviewedBy || 'Shri R. K. Hegde, SLAO Ramanagara',
+    approvedAt: now.toISOString(),
+    forwardedAt: now.toISOString(),
+    updatedAt: now
+  };
+
+  // Upsert into Project_Approval_LA using sourceProjectId to prevent duplicate records
+  await approvalCol.updateOne(
+    { sourceProjectId: sourceProjId },
+    { $set: snapshotDoc },
+    { upsert: true }
+  );
+
+  const savedRecord = await approvalCol.findOne({ sourceProjectId: sourceProjId });
+  return {
+    ...savedRecord,
+    id: savedRecord?._id.toString()
+  };
+}
+
+/**
+ * Retrieves all approved project records from lams_db.Project_Approval_LA for Financial Officer / Finance Minister.
+ */
+export async function getApprovedProjectsLA(): Promise<any[]> {
+  const approvalCol = getProjectApprovalLACollection();
+  const docs = await approvalCol
+    .find({})
+    .sort({ approvedAt: -1, updatedAt: -1 })
+    .toArray();
+
+  return docs.map(doc => ({
+    ...doc,
+    id: doc._id.toString(),
+    _id: doc._id.toString()
+  }));
 }
