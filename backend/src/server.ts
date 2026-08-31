@@ -22,8 +22,9 @@ async function startServer() {
 
     server.listen(PORT, () => {
       console.log(`[Server] LAMS Backend API running on port ${PORT}`);
-      console.log(`[Server] Health check: http://localhost:${PORT}/api/health`);
-      console.log(`[Server] Parcels API:  http://localhost:${PORT}/api/parcels`);
+      console.log(`[Server] Health check:  http://localhost:${PORT}/api/health`);
+      console.log(`[Server] Parcels API:   http://localhost:${PORT}/api/parcels`);
+      console.log(`[Server] Projects API:  http://localhost:${PORT}/api/projects`);
     });
 
     // Graceful shutdown handling

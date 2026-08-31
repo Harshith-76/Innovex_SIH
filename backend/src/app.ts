@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import parcelRoutes from './routes/parcelRoutes.js';
+import projectRoutes from './routes/projectRoutes.js';
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use(express.json());
 
 // Mount API routes under /api
 app.use('/api', parcelRoutes);
+app.use('/api', projectRoutes);
 
 // Root informational endpoint
 app.get('/', (_req: Request, res: Response) => {
@@ -31,6 +33,8 @@ app.get('/', (_req: Request, res: Response) => {
       health: '/api/health',
       parcels: '/api/parcels',
       parcelById: '/api/parcels/:id',
+      projects: '/api/projects',
+      projectById: '/api/projects/:id',
     },
   });
 });
