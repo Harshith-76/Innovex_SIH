@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopHeader } from './components/layout/TopHeader';
+import { LoginPage } from './pages/LoginPage';
 
 // Pages
 import { DashboardPage } from './pages/DashboardPage';
@@ -63,6 +64,12 @@ const MainContent: React.FC = () => {
 };
 
 export const App: React.FC = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  if (!isLoggedIn) {
+    return <LoginPage onLoginSuccess={(_username) => setIsLoggedIn(true)} />;
+  }
+
   return (
     <AppProvider>
       <MainContent />
@@ -71,3 +78,4 @@ export const App: React.FC = () => {
 };
 
 export default App;
+
