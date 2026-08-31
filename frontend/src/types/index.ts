@@ -140,6 +140,7 @@ export interface LandAcquisitionProject {
   description: string;
   stages: ProjectStageDetail[];
   villages: VillageSummary[];
+  selectedParcelIds?: string[];
 
   // Route & Alignment Information
   routeId?: string;
@@ -147,6 +148,7 @@ export interface LandAcquisitionProject {
   startLocation?: string;
   endLocation?: string;
   proposedLengthKm?: number;
+  routeLengthKm?: number;
   rowWidthM?: number;
   lanes?: number;
   carriagewayWidthM?: number;

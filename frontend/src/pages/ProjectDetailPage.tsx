@@ -280,44 +280,6 @@ export const ProjectDetailPage: React.FC = () => {
             />
           </div>
 
-          {/* Statutory Lifecycle Banner */}
-          <div className="gov-card">
-            <div className="gov-card-header">
-              <div className="gov-card-title">
-                <GitBranch size={16} color="var(--gov-blue-600)" />
-                <span>Statutory Land Acquisition Lifecycle</span>
-              </div>
-              <button className="gov-btn gov-btn-secondary gov-btn-sm" onClick={() => setActiveTab('timeline')}>
-                Full Audit Trail
-              </button>
-            </div>
-            <div className="workflow-stepper">
-              {lifecycleStages.map((stg, idx) => {
-                // Determine stage status
-                let isDone = false;
-                let isInProgress = false;
-                if (idx < 5) isDone = true;
-                else if (idx === 5) isInProgress = true;
-
-                return (
-                  <div
-                    key={stg.key}
-                    className={`workflow-step ${isDone ? 'completed' : isInProgress ? 'active' : 'pending'}`}
-                  >
-                    <div className="workflow-step-line" />
-                    <div className="workflow-step-node">
-                      {isDone ? '✓' : idx + 1}
-                    </div>
-                    <div className="workflow-step-label">{stg.label}</div>
-                    <div className="workflow-step-status">
-                      {isDone ? 'Completed' : isInProgress ? 'In Progress' : 'Pending'}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Revenue Village Progress Table */}
           <div className="gov-card">
             <div className="gov-card-header">

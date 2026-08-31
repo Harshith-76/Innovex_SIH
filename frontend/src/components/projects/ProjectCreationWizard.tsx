@@ -38,7 +38,7 @@ export const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ is
   const [projectType, setProjectType] = useState<string>('Highway Infrastructure');
   const [agencyName, setAgencyName] = useState<string>('Karnataka State Highway Improvement Project (KSHIP)');
   const [state, setState] = useState<string>('Karnataka');
-  const [district, setDistrict] = useState<string>('Bengaluru Rural');
+  const [district, setDistrict] = useState<string>('Dakshina Kannada');
   const [landRequiredAcres, setLandRequiredAcres] = useState<number>(150);
   const [estimatedCompensationCr, setEstimatedCompensationCr] = useState<number>(45.0);
   const [scope, setScope] = useState<string>('');
@@ -553,7 +553,7 @@ export const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ is
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--gov-slate-700)', marginBottom: '6px' }}>
-                      DISTRICT IN KARNATAKA <span style={{ color: 'red' }}>*</span>
+                      DISTRICT <span style={{ color: 'red' }}>*</span>
                     </label>
                     <select
                       value={district}

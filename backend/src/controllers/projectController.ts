@@ -83,3 +83,35 @@ export async function createProject(req: Request, res: Response, next: NextFunct
     next(error);
   }
 }
+
+/**
+ * PATCH /api/projects/:id
+ * Updates an existing project document in MongoDB Atlas.
+ */
+export async function updateProject(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const body = req.body;
+
+    if (!id || !id.trim()) {
+      res.status(400).json({ error: 'Project ID parameter is required.' });
+      return;
+    }
+
+    if (!body || typeof body !== 'object') {
+      res.status(400).json({ error: 'Request body must be a valid JSON object.' });
+      return;
+    }
+
+    const updated = await projectService.updateProject(id, body);
+
+    if (!updated) {
+      res.status(404).json({ error: `Project not found with ID or code: ${id}` });
+      return;
+    }
+
+    res.status(200).json(updated);
+  } catch (error) {
+    next(error);
+  }
+}
