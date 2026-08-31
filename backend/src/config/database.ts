@@ -6,6 +6,8 @@ let db: Db | null = null;
 const DB_NAME = process.env.DB_NAME || 'lams_db';
 const PARCELS_COLLECTION = 'parcels';
 const PROJECTS_COLLECTION = 'projects';
+const HISSA_COLLECTION = 'hissa_records';
+const OWNERS_COLLECTION = 'owners';
 
 /**
  * Establishes and caches the MongoDB Atlas connection.
@@ -77,6 +79,20 @@ export function getParcelsCollection<T extends Document = Document>(): Collectio
  */
 export function getProjectsCollection<T extends Document = Document>(): Collection<T> {
   return getDb().collection<T>(PROJECTS_COLLECTION);
+}
+
+/**
+ * Returns the typed hissa_records collection from the active database.
+ */
+export function getHissaCollection<T extends Document = Document>(): Collection<T> {
+  return getDb().collection<T>(HISSA_COLLECTION);
+}
+
+/**
+ * Returns the typed owners collection from the active database.
+ */
+export function getOwnersCollection<T extends Document = Document>(): Collection<T> {
+  return getDb().collection<T>(OWNERS_COLLECTION);
 }
 
 /**

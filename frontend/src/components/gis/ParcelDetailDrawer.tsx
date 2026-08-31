@@ -17,7 +17,11 @@ import {
   Edit3,
   ExternalLink,
   ShieldAlert,
-  ArrowRight
+  ArrowRight,
+  User,
+  Phone,
+  Layers,
+  Info
 } from 'lucide-react';
 
 interface ParcelDetailDrawerProps {
@@ -26,13 +30,17 @@ interface ParcelDetailDrawerProps {
 }
 
 export const ParcelDetailDrawer: React.FC<ParcelDetailDrawerProps> = ({ parcel, onClose }) => {
-  const { updateParcelStatus, setCurrentPage, setSelectedParcelId } = useApp();
+  const { updateParcelStatus, setCurrentPage, getHissaByParcelId } = useApp();
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [targetStatus, setTargetStatus] = useState<ParcelStatus>(parcel?.acquisitionStatus || 'Notification');
   const [targetCompStatus, setTargetCompStatus] = useState<CompensationStatus>(parcel?.compensationStatus || 'Pending Approval');
   const [statusUpdateNote, setStatusUpdateNote] = useState('');
 
   if (!parcel) return null;
+
+  const hissaRecords = parcel.hissaRecords && parcel.hissaRecords.length > 0
+    ? parcel.hissaRecords
+    : getHissaByParcelId(parcel.parcelId);
 
   const handleUpdateStatusSubmit = () => {
     updateParcelStatus(parcel.parcelId, targetStatus, targetCompStatus);
@@ -42,24 +50,25 @@ export const ParcelDetailDrawer: React.FC<ParcelDetailDrawerProps> = ({ parcel, 
   const formattedComp = (parcel.compensationAmount / 100000).toFixed(2);
 
   return (
-    <div className="gis-drawer">
+    <div className="gis-drawer" style={{ width: '380px', minWidth: '380px' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gov-slate-500)', textTransform: 'uppercase' }}>
-            Cadastral Record
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gov-slate-500)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Cadastral Record & Land Title
           </div>
-          <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--gov-navy-900)' }}>
+          <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--gov-navy-900)' }}>
             Survey No. {parcel.surveyNumber}
           </div>
-          <div style={{ fontSize: '11.5px', color: 'var(--gov-slate-600)' }}>
-            {parcel.village}, {parcel.taluk} Taluk
+          <div style={{ fontSize: '12px', color: 'var(--gov-slate-600)' }}>
+            {parcel.village}, {parcel.taluk} Taluk, {parcel.district}
           </div>
         </div>
         <button
           className="gov-btn gov-btn-secondary gov-btn-sm"
           style={{ padding: '4px' }}
           onClick={onClose}
+          title="Close Drawer"
         >
           <X size={16} />
         </button>
@@ -95,10 +104,134 @@ export const ParcelDetailDrawer: React.FC<ParcelDetailDrawerProps> = ({ parcel, 
         </button>
       </div>
 
-      {/* Land & Owner Specifications */}
+      {/* Hissa Sub-divisions & Registered Owners Section */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gov-navy-900)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Layers size={14} color="#4f46e5" />
+            Hissa Sub-divisions & Ownership
+          </div>
+          {hissaRecords.length > 0 && (
+            <span
+              style={{
+                fontSize: '10px',
+                fontWeight: 600,
+                backgroundColor: '#e0e7ff',
+                color: '#4338ca',
+                padding: '2px 6px',
+                borderRadius: '10px'
+              }}
+            >
+              {hissaRecords.length} Sub-division{hissaRecords.length > 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+
+        {hissaRecords.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {hissaRecords.map((hissa, idx) => (
+              <div
+                key={hissa.hissa_id || hissa._id || idx}
+                style={{
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #c7d2fe',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '10px 12px',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e0e7ff', paddingBottom: '6px', marginBottom: '6px' }}>
+                  <div style={{ fontWeight: 700, fontSize: '12.5px', color: '#1e1b4b' }}>
+                    Hissa No. {hissa.hissa_no}
+                  </div>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#4338ca' }}>
+                    Extent: {hissa.extent} {hissa.extent_unit}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                    <User size={13} style={{ marginTop: '2px', color: '#6366f1', flexShrink: 0 }} />
+                    <div>
+                      <span style={{ color: 'var(--gov-slate-500)' }}>Owner: </span>
+                      <strong style={{ color: 'var(--gov-navy-900)' }}>{hissa.owner?.name || 'Owner Name Pending'}</strong>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--gov-slate-400)', marginLeft: '19px' }}>Owner ID:</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10.5px', fontWeight: 600, color: '#334155' }}>
+                      {hissa.owner?.owner_id || hissa.owner_id}
+                    </span>
+                  </div>
+
+                  {hissa.owner?.mobile && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Phone size={12} style={{ color: 'var(--gov-slate-400)', marginLeft: '3px' }} />
+                      <span style={{ color: 'var(--gov-slate-600)', fontSize: '10.5px', fontFamily: 'var(--font-mono)' }}>
+                        {hissa.owner.mobile}
+                      </span>
+                    </div>
+                  )}
+
+                  {hissa.owner?.address && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginTop: '2px' }}>
+                      <MapPin size={12} style={{ marginTop: '2px', color: 'var(--gov-slate-400)', marginLeft: '3px', flexShrink: 0 }} />
+                      <span style={{ color: 'var(--gov-slate-500)', fontSize: '10px' }}>
+                        {hissa.owner.address}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {/* Clear Parent Parcel Geometry distinction alert */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '6px',
+                padding: '6px 8px',
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '10px',
+                color: '#64748b',
+                lineHeight: 1.3
+              }}
+            >
+              <Info size={13} style={{ marginTop: '1px', flexShrink: 0, color: '#3b82f6' }} />
+              <div>
+                <strong>Geometry Reference:</strong> The highlighted map boundary represents the entire parent cadastral parcel ({parcel.areaAcres} Acres). Official internal sub-division boundaries are not demarcated in GIS.
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '10px 12px',
+              backgroundColor: 'var(--gov-slate-50)',
+              border: '1px dashed var(--gov-slate-200)',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '11px',
+              color: 'var(--gov-slate-600)'
+            }}
+          >
+            <div style={{ fontWeight: 600, color: 'var(--gov-navy-900)', marginBottom: '2px' }}>
+              Standard Cadastral Record
+            </div>
+            <div style={{ fontSize: '10.5px', color: 'var(--gov-slate-500)' }}>
+              No separate Hissa sub-divisions recorded in database. Registered Khatadar: <strong>{parcel.ownerName}</strong>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Land & Cadastral Attributes */}
       <div>
         <div style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--gov-navy-900)', marginBottom: '8px' }}>
-          Title & Land Attributes
+          Cadastral Identifiers & Location
         </div>
         <div
           style={{
@@ -149,13 +282,8 @@ export const ParcelDetailDrawer: React.FC<ParcelDetailDrawerProps> = ({ parcel, 
             </div>
           </div>
           <div>
-            <div style={{ color: 'var(--gov-slate-500)', fontSize: '10px' }}>Soil / Land Quality</div>
+            <div style={{ color: 'var(--gov-slate-500)', fontSize: '10px' }}>Soil / Quality</div>
             <div style={{ fontWeight: 600, color: 'var(--gov-slate-800)' }}>{parcel.soilClassification || '—'}</div>
-          </div>
-          <div style={{ gridColumn: 'span 2', borderTop: '1px dashed var(--gov-slate-200)', paddingTop: '6px', marginTop: '2px' }}>
-            <div style={{ color: 'var(--gov-slate-500)', fontSize: '10px' }}>Registered Owner / Khatadar</div>
-            <div style={{ fontWeight: 600, color: 'var(--gov-navy-900)' }}>{parcel.ownerName || '—'}</div>
-            <div style={{ fontSize: '10px', color: 'var(--gov-slate-500)' }}>Aadhaar: {parcel.aadhaarMasked || '— (Bhoomi Sync Pending)'}</div>
           </div>
         </div>
       </div>

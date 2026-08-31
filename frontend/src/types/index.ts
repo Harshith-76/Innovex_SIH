@@ -34,6 +34,32 @@ export type UserRole =
   | 'Land Acquisition Authority'
   | 'Project Implementing Agency';
 
+export interface HissaOwner {
+  owner_id: string;
+  name: string;
+  mobile?: string;
+  address?: string;
+}
+
+export interface HissaRecord {
+  _id: string;
+  hissa_id: string;
+  parcel_id: string;
+  survey_no: string;
+  hissa_no: string;
+  extent: number;
+  extent_unit: string;
+  extent_basis?: string;
+  owner_id: string;
+  owner?: HissaOwner;
+  parcel_geometry?: {
+    type: string;
+    coordinates: any;
+  };
+  geometry_source?: string;
+  parcel_geometry_role?: string;
+}
+
 export interface LandParcel {
   parcelId: string;
   surveyNumber: string;
@@ -75,6 +101,8 @@ export interface LandParcel {
   multiplierFactor?: number;
   solatiumPercentage?: number;
   lastUpdated: string;
+  hissaRecords?: HissaRecord[];
+  hasHissa?: boolean;
 }
 
 export interface VillageSummary {

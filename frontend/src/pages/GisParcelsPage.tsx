@@ -10,7 +10,8 @@ import {
   Layers,
   RotateCcw,
   SlidersHorizontal,
-  ChevronDown
+  ChevronDown,
+  FileCheck2
 } from 'lucide-react';
 
 export const GisParcelsPage: React.FC = () => {
@@ -29,9 +30,10 @@ export const GisParcelsPage: React.FC = () => {
   const [filterDistrict, setFilterDistrict] = useState('ALL');
   const [filterTaluk, setFilterTaluk] = useState('ALL');
   const [filterVillage, setFilterVillage] = useState('ALL');
-  const [filterSurveyNo, setFilterSurveyNo] = useState('');
+  const [filterSearch, setFilterSearch] = useState('');
   const [filterLandType, setFilterLandType] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [filterHissaOnly, setFilterHissaOnly] = useState<string>('ALL');
 
   // Dynamic filter options based on available parcel data
   const dynamicDistricts = Array.from(new Set(parcels.map((p) => p.district).filter(Boolean)));
@@ -44,9 +46,59 @@ export const GisParcelsPage: React.FC = () => {
     const matchesVillage = filterVillage === 'ALL' || p.village === filterVillage;
     const matchesLandType = filterLandType === 'ALL' || p.landType === filterLandType;
     const matchesStatus = filterStatus === 'ALL' || p.acquisitionStatus === filterStatus;
-    const matchesSurveyNo = !filterSurveyNo || p.surveyNumber.toLowerCase().includes(filterSurveyNo.toLowerCase());
+    const matchesHissa =
+      filterHissaOnly === 'ALL' ||
+      (filterHissaOnly === 'WITH_HISSA' && p.hasHissa) ||
+      (filterHissaOnly === 'WITHOUT_HISSA' && !p.hasHissa);
 
-    return matchesDistrict && matchesTaluk && matchesVillage && matchesLandType && matchesStatus && matchesSurveyNo;
+    if (!matchesDistrict || !matchesTaluk || !matchesVillage || !matchesLandType || !matchesStatus || !matchesHissa) {
+      return false;
+    }
+
+    if (!filterSearch || !filterSearch.trim()) {
+      return true;
+    }
+
+    const q = filterSearch.trim().toLowerCase();
+
+    // 1. Survey Number match
+    if (p.surveyNumber.toLowerCase().includes(q)) return true;
+
+    // 2. Parcel ID / Cadastral ID / ULPIN match
+    if (p.parcelId.toLowerCase().includes(q)) return true;
+    if (p.cadastralId && p.cadastralId.toLowerCase().includes(q)) return true;
+    if (p.ulpin && p.ulpin.toLowerCase().includes(q)) return true;
+
+    // 3. Owner Name match
+    if (p.ownerName && p.ownerName.toLowerCase().includes(q)) return true;
+
+    // 4. Detailed Hissa Records & Hissa Owner match
+    if (p.hissaRecords && p.hissaRecords.length > 0) {
+      const hissaMatch = p.hissaRecords.some((h) => {
+        const hissaNo = String(h.hissa_no).toLowerCase();
+        const hissaId = String(h.hissa_id).toLowerCase();
+        const ownerName = (h.owner?.name || '').toLowerCase();
+        const ownerId = (h.owner?.owner_id || h.owner_id || '').toLowerCase();
+        const ownerMobile = (h.owner?.mobile || '').toLowerCase();
+        const ownerAddress = (h.owner?.address || '').toLowerCase();
+
+        return (
+          hissaNo === q ||
+          `hissa ${hissaNo}`.includes(q) ||
+          `hissa ${hissaNo}` === q ||
+          `hissa ${hissaNo}`.replace(/\s+/g, '') === q.replace(/\s+/g, '') ||
+          `/${hissaNo}`.includes(q) ||
+          hissaId.includes(q) ||
+          ownerName.includes(q) ||
+          ownerId.includes(q) ||
+          ownerMobile.includes(q) ||
+          ownerAddress.includes(q)
+        );
+      });
+      if (hissaMatch) return true;
+    }
+
+    return false;
   });
 
   const resetFilters = () => {
@@ -54,10 +106,13 @@ export const GisParcelsPage: React.FC = () => {
     setFilterDistrict('ALL');
     setFilterTaluk('ALL');
     setFilterVillage('ALL');
-    setFilterSurveyNo('');
+    setFilterSearch('');
     setFilterLandType('ALL');
     setFilterStatus('ALL');
+    setFilterHissaOnly('ALL');
   };
+
+  const hissaLinkedCount = parcels.filter(p => p.hasHissa).length;
 
   return (
     <div className="gis-layout">
@@ -96,10 +151,10 @@ export const GisParcelsPage: React.FC = () => {
           </select>
         </div>
 
-        {/* Survey Number Search */}
+        {/* Multi-attribute Search Input */}
         <div>
           <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--gov-slate-600)', marginBottom: '3px' }}>
-            Survey Number / Sub-division
+            Search Survey / Hissa / Owner / ULPIN
           </label>
           <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
             <Search size={13} style={{ position: 'absolute', left: '8px', color: 'var(--gov-slate-400)' }} />
@@ -107,11 +162,28 @@ export const GisParcelsPage: React.FC = () => {
               type="text"
               className="gov-input"
               style={{ width: '100%', paddingLeft: '26px' }}
-              placeholder="e.g. 77, 78/1, 80..."
-              value={filterSurveyNo}
-              onChange={(e) => setFilterSurveyNo(e.target.value)}
+              placeholder="e.g. 307, Hissa 2, Shetty, ULPIN..."
+              value={filterSearch}
+              onChange={(e) => setFilterSearch(e.target.value)}
             />
           </div>
+        </div>
+
+        {/* Hissa Data Availability Filter */}
+        <div>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--gov-slate-600)', marginBottom: '3px' }}>
+            Hissa Sub-division Records
+          </label>
+          <select
+            className="gov-select"
+            style={{ width: '100%' }}
+            value={filterHissaOnly}
+            onChange={(e) => setFilterHissaOnly(e.target.value)}
+          >
+            <option value="ALL">All Cadastral Parcels ({parcels.length})</option>
+            <option value="WITH_HISSA">With Verified Hissa Records ({hissaLinkedCount})</option>
+            <option value="WITHOUT_HISSA">Standard Parcels (Hissa Sync Pending)</option>
+          </select>
         </div>
 
         {/* State */}

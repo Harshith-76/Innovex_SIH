@@ -175,3 +175,39 @@ export async function updateProject(id: string, data: Record<string, any>): Prom
 
   return response.json();
 }
+
+/**
+ * Fetches all Hissa records with resolved Owner information.
+ */
+export async function fetchHissaRecords(params?: {
+  parcel_id?: string;
+  survey_no?: string;
+  owner_id?: string;
+  owner_name?: string;
+}): Promise<any[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.parcel_id) searchParams.set('parcel_id', params.parcel_id);
+  if (params?.survey_no) searchParams.set('survey_no', params.survey_no);
+  if (params?.owner_id) searchParams.set('owner_id', params.owner_id);
+  if (params?.owner_name) searchParams.set('owner_name', params.owner_name);
+
+  const query = searchParams.toString();
+  const url = query ? `${API_BASE_URL}/hissa?${query}` : `${API_BASE_URL}/hissa`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch hissa records: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Fetches Hissa records associated with a specific parcel_id.
+ */
+export async function fetchHissaByParcelId(parcelId: string): Promise<any[]> {
+  const response = await fetch(`${API_BASE_URL}/hissa/parcel/${encodeURIComponent(parcelId.trim())}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch hissa records for parcel "${parcelId}": ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}

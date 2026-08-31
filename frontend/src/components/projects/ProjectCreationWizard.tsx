@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { KARNATAKA_DISTRICTS, getDistrictCenter } from '../../data/karnatakaDistricts';
-import { LandParcel } from '../../types';
+import { LandParcel, HissaRecord } from '../../types';
 import { LeafletGisMap } from '../gis/LeafletGisMap';
-import { fetchParcels } from '../../services/api';
+import { fetchParcels, fetchHissaRecords } from '../../services/api';
 import { featureCollectionToLandParcels } from '../../utils/geoAdapter';
 import {
   MapPin,
@@ -18,7 +18,10 @@ import {
   Compass,
   Layers,
   Search,
-  Maximize2
+  Maximize2,
+  User,
+  Phone,
+  Info
 } from 'lucide-react';
 
 interface ProjectCreationWizardProps {
@@ -52,7 +55,7 @@ export const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ is
   const [isParcelsLoading, setIsParcelsLoading] = useState<boolean>(false);
   const [parcelsError, setParcelsError] = useState<string | null>(null);
 
-  // Fetch real cadastral parcels only on Step 2, using the same API + adapter as GIS.
+  // Fetch real cadastral parcels and Hissa records for the chosen district
   useEffect(() => {
     if (!isOpen || step !== 2 || !district) {
       return;
@@ -65,13 +68,49 @@ export const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ is
       setParcelsError(null);
       setWizardParcels([]);
       try {
-        const featureCollection = await fetchParcels({
-          state: 'Karnataka',
-          district
-        });
+        const [featureCollection, hissaList] = await Promise.all([
+          fetchParcels({
+            state: 'Karnataka',
+            district
+          }),
+          fetchHissaRecords().catch(() => [] as HissaRecord[])
+        ]);
+
+        const hissaMap: Record<string, HissaRecord[]> = {};
+        for (const h of hissaList) {
+          if (!hissaMap[h.parcel_id]) {
+            hissaMap[h.parcel_id] = [];
+          }
+          hissaMap[h.parcel_id].push(h);
+        }
+
         const adapted = featureCollectionToLandParcels(featureCollection);
+        
+        // Enrich parcels with Hissa records and resolved owners
+        const enriched = adapted.map((parcel) => {
+          const associatedHissas = hissaMap[parcel.parcelId] || [];
+          const hasHissa = associatedHissas.length > 0;
+          
+          let ownerDisplay = parcel.ownerName;
+          if (hasHissa) {
+            const validOwnerNames = associatedHissas
+              .map((h) => h.owner?.name)
+              .filter((n): n is string => Boolean(n && n.trim()));
+            if (validOwnerNames.length > 0) {
+              ownerDisplay = validOwnerNames.join(', ');
+            }
+          }
+
+          return {
+            ...parcel,
+            hissaRecords: associatedHissas,
+            hasHissa,
+            ownerName: ownerDisplay
+          };
+        });
+
         if (!cancelled) {
-          setWizardParcels(adapted);
+          setWizardParcels(enriched);
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
@@ -99,17 +138,47 @@ export const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ is
     setSelectedParcelIds([]); // Clear selection when district changes
   };
 
-  // Filtered parcels for map / table search
+  // Filtered parcels for map / table search with multi-field search support
   const filteredParcels = useMemo(() => {
     if (!parcelSearch.trim()) return wizardParcels;
     const q = parcelSearch.toLowerCase().trim();
-    return wizardParcels.filter(
-      (p) =>
-        p.surveyNumber.toLowerCase().includes(q) ||
-        p.village.toLowerCase().includes(q) ||
-        p.taluk.toLowerCase().includes(q) ||
-        p.parcelId.toLowerCase().includes(q)
-    );
+    return wizardParcels.filter((p) => {
+      // 1. Survey Number match
+      if (p.surveyNumber.toLowerCase().includes(q)) return true;
+
+      // 2. Village / Taluk match
+      if (p.village.toLowerCase().includes(q)) return true;
+      if (p.taluk.toLowerCase().includes(q)) return true;
+
+      // 3. Parcel ID / Cadastral ID / ULPIN match
+      if (p.parcelId.toLowerCase().includes(q)) return true;
+      if (p.cadastralId && p.cadastralId.toLowerCase().includes(q)) return true;
+      if (p.ulpin && p.ulpin.toLowerCase().includes(q)) return true;
+
+      // 4. Owner Name match
+      if (p.ownerName && p.ownerName.toLowerCase().includes(q)) return true;
+
+      // 5. Hissa Sub-division & Hissa Owner match
+      if (p.hissaRecords && p.hissaRecords.length > 0) {
+        return p.hissaRecords.some((h) => {
+          const hissaNo = String(h.hissa_no).toLowerCase();
+          const hissaId = String(h.hissa_id).toLowerCase();
+          const ownerName = (h.owner?.name || '').toLowerCase();
+          const ownerId = (h.owner?.owner_id || h.owner_id || '').toLowerCase();
+          return (
+            hissaNo === q ||
+            `hissa ${hissaNo}`.includes(q) ||
+            `hissa ${hissaNo}` === q ||
+            `/${hissaNo}`.includes(q) ||
+            hissaId.includes(q) ||
+            ownerName.includes(q) ||
+            ownerId.includes(q)
+          );
+        });
+      }
+
+      return false;
+    });
   }, [wizardParcels, parcelSearch]);
 
   // Selected Parcel Objects
@@ -956,48 +1025,104 @@ export const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ is
                       Click parcel boundaries on the map to begin.
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {selectedParcels.map((pcl) => (
-                        <div
-                          key={pcl.parcelId}
-                          style={{
-                            padding: '8px 12px',
-                            backgroundColor: '#ffffff',
-                            border: '1px solid var(--gov-slate-200)',
-                            borderRadius: 'var(--radius-sm)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between'
-                          }}
-                        >
-                          <div>
-                            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gov-navy-900)' }}>
-                              Survey No: {pcl.surveyNumber}
-                            </div>
-                            <div style={{ fontSize: '11px', color: 'var(--gov-slate-600)' }}>
-                              {pcl.village}, {pcl.taluk}
-                            </div>
-                            <div style={{ fontSize: '11px', color: 'var(--gov-navy-800)', fontWeight: 600, marginTop: '2px' }}>
-                              {pcl.areaAcres} Acres · {pcl.landType}
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={() => handleRemoveParcel(pcl.parcelId)}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {selectedParcels.map((pcl) => {
+                        const hissaCount = pcl.hissaRecords ? pcl.hissaRecords.length : 0;
+                        return (
+                          <div
+                            key={pcl.parcelId}
                             style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: '#ef4444',
-                              cursor: 'pointer',
-                              padding: '4px',
-                              borderRadius: '4px'
+                              padding: '10px 12px',
+                              backgroundColor: '#ffffff',
+                              border: '1px solid var(--gov-slate-200)',
+                              borderRadius: 'var(--radius-sm)',
+                              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)'
                             }}
-                            title="Deselect parcel"
                           >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      ))}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '6px' }}>
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--gov-navy-900)' }}>
+                                    Survey No: {pcl.surveyNumber}
+                                  </span>
+                                  {hissaCount > 0 ? (
+                                    <span style={{ fontSize: '9.5px', fontWeight: 700, backgroundColor: '#e0e7ff', color: '#4338ca', padding: '1px 5px', borderRadius: '3px' }}>
+                                      {hissaCount} Hissa{hissaCount > 1 ? 's' : ''}
+                                    </span>
+                                  ) : (
+                                    <span style={{ fontSize: '9.5px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '1px 5px', borderRadius: '3px' }}>
+                                      Standard Parcel
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '10.5px', color: 'var(--gov-slate-500)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
+                                  {pcl.parcelId}
+                                </div>
+                                <div style={{ fontSize: '11px', color: 'var(--gov-slate-600)', marginTop: '2px' }}>
+                                  {pcl.village}, {pcl.taluk} Taluk · <strong>{pcl.areaAcres} Acres</strong>
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={() => handleRemoveParcel(pcl.parcelId)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: '#ef4444',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  borderRadius: '4px'
+                                }}
+                                title="Deselect parcel"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+
+                            {/* Hissa Sub-division details */}
+                            {hissaCount > 0 ? (
+                              <div style={{ marginTop: '8px', borderTop: '1px solid #e0e7ff', paddingTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#3730a3' }}>
+                                  Hissa Ownership Breakdown:
+                                </div>
+                                {pcl.hissaRecords!.map((h, hIdx) => (
+                                  <div
+                                    key={h.hissa_id || hIdx}
+                                    style={{
+                                      backgroundColor: '#f8fafc',
+                                      border: '1px solid #e2e8f0',
+                                      borderRadius: '4px',
+                                      padding: '6px 8px',
+                                      fontSize: '10.5px'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#0f172a' }}>
+                                      <span>Hissa No. {h.hissa_no}</span>
+                                      <span style={{ color: '#4338ca' }}>{h.extent} {h.extent_unit}</span>
+                                    </div>
+                                    <div style={{ color: '#334155', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <User size={11} color="#6366f1" />
+                                      <strong>{h.owner?.name || 'Owner Pending'}</strong>
+                                      <span style={{ fontSize: '9.5px', color: '#64748b', fontFamily: 'var(--font-mono)' }}>
+                                        ({h.owner?.owner_id || h.owner_id})
+                                      </span>
+                                    </div>
+                                    {h.owner?.mobile && (
+                                      <div style={{ color: '#64748b', fontSize: '9.5px', marginLeft: '15px' }}>
+                                        Contact: {h.owner.mobile}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div style={{ marginTop: '6px', borderTop: '1px dashed var(--gov-slate-200)', paddingTop: '4px', fontSize: '10.5px', color: 'var(--gov-slate-500)' }}>
+                                Registered Khatadar: <strong style={{ color: 'var(--gov-navy-900)' }}>{pcl.ownerName}</strong>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1123,7 +1248,7 @@ export const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ is
                   <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gov-navy-900)', marginBottom: '8px' }}>
                     Selected Cadastral Parcels Breakdown ({selectedParcels.length})
                   </h4>
-                  <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--gov-slate-200)', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid var(--gov-slate-200)', borderRadius: 'var(--radius-sm)' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                       <thead style={{ backgroundColor: 'var(--gov-slate-100)', position: 'sticky', top: 0 }}>
                         <tr>
@@ -1131,19 +1256,33 @@ export const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ is
                           <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700 }}>Village</th>
                           <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700 }}>Taluk</th>
                           <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700 }}>Area (Acres)</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700 }}>Land Category</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700 }}>Hissa & Ownership</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {selectedParcels.map((p) => (
-                          <tr key={p.parcelId} style={{ borderBottom: '1px solid var(--gov-slate-200)' }}>
-                            <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--gov-navy-900)' }}>{p.surveyNumber}</td>
-                            <td style={{ padding: '8px 12px' }}>{p.village}</td>
-                            <td style={{ padding: '8px 12px' }}>{p.taluk}</td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700 }}>{p.areaAcres}</td>
-                            <td style={{ padding: '8px 12px' }}>{p.landType}</td>
-                          </tr>
-                        ))}
+                        {selectedParcels.map((p) => {
+                          const hCount = p.hissaRecords ? p.hissaRecords.length : 0;
+                          return (
+                            <tr key={p.parcelId} style={{ borderBottom: '1px solid var(--gov-slate-200)' }}>
+                              <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--gov-navy-900)' }}>{p.surveyNumber}</td>
+                              <td style={{ padding: '8px 12px' }}>{p.village}</td>
+                              <td style={{ padding: '8px 12px' }}>{p.taluk}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700 }}>{p.areaAcres}</td>
+                              <td style={{ padding: '8px 12px' }}>
+                                {hCount > 0 ? (
+                                  <div>
+                                    <span style={{ fontWeight: 600, color: '#4338ca' }}>{hCount} Hissa{hCount > 1 ? 's' : ''}: </span>
+                                    <span style={{ color: '#334155' }}>
+                                      {p.hissaRecords!.map(h => `${h.owner?.name || 'Owner'} (Hissa ${h.hissa_no}: ${h.extent} ac)`).join('; ')}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span style={{ color: '#64748b' }}>{p.ownerName}</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
