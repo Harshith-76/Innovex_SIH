@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopHeader } from './components/layout/TopHeader';
@@ -19,7 +19,7 @@ import { AlertsPage } from './pages/AlertsPage';
 import { AdministrationPage } from './pages/AdministrationPage';
 
 const MainContent: React.FC = () => {
-  const { currentPage } = useApp();
+  const { currentPage, canAccess, setCurrentPage, currentRole } = useApp();
 
   const renderCurrentPage = () => {
     switch (currentPage) {
@@ -49,8 +49,32 @@ const MainContent: React.FC = () => {
         return <AlertsPage />;
       case 'administration':
         return <AdministrationPage />;
+      case 'access-denied':
+        return (
+          <div className="page-body">
+            <div className="gov-card" style={{ maxWidth: 620, margin: '64px auto', padding: 32, textAlign: 'center' }}>
+              <h1 className="page-title">Access Denied</h1>
+              <p className="page-subtitle" style={{ marginTop: 10 }}>
+                You do not have permission to access this module.
+              </p>
+              {currentRole !== 'user' && (
+                <button
+                  className="gov-btn gov-btn-primary"
+                  style={{ marginTop: 20 }}
+                  onClick={() => {
+                    const fallback = (['dashboard', 'workflow', 'projects', 'compensation', 'gis-parcels', 'district-monitoring'] as const)
+                      .find((page) => canAccess(page));
+                    if (fallback) setCurrentPage(fallback);
+                  }}
+                >
+                  Go to an authorized module
+                </button>
+              )}
+            </div>
+          </div>
+        );
       default:
-        return <DashboardPage />;
+        return null;
     }
   };
 
@@ -65,19 +89,22 @@ const MainContent: React.FC = () => {
   );
 };
 
-export const App: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+const AppShell: React.FC = () => {
+  const { currentUser, authLoading, login } = useApp();
 
-  if (!isLoggedIn) {
-    return <LoginPage onLoginSuccess={(_username) => setIsLoggedIn(true)} />;
-  }
+  if (authLoading) return <div className="lp2-container" aria-label="Restoring secure session" />;
+  if (!currentUser) return <LoginPage onLoginSuccess={login} />;
 
   return (
-    <AppProvider>
-      <MainContent />
-    </AppProvider>
+    <MainContent />
   );
 };
+
+export const App: React.FC = () => (
+  <AppProvider>
+    <AppShell />
+  </AppProvider>
+);
 
 export default App;
 

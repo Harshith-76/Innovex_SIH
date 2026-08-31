@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export interface LoginPageProps {
-  onLoginSuccess: (username: string) => void;
+  onLoginSuccess: (email: string, password: string) => Promise<void>;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
@@ -25,7 +25,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || isSuccess) return;
 
@@ -46,11 +46,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
     setErrors({});
     setIsSubmitting(true);
-    setIsSuccess(true);
-
-    setTimeout(() => {
-      onLoginSuccess(username.trim());
-    }, 800);
+    try {
+      await onLoginSuccess(username.trim(), password);
+      setIsSuccess(true);
+    } catch (error) {
+      setErrors({ username: error instanceof Error ? error.message : 'Invalid email or password.' });
+      setIsSubmitting(false);
+    }
   };
 
   const handleSSOLogin = () => {

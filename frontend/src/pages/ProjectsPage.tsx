@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export const ProjectsPage: React.FC = () => {
-  const { projects, openProjectDetail, openProjectRoute, searchQuery: globalSearch, currentRole } = useApp();
+  const { projects, openProjectDetail, openProjectRoute, searchQuery: globalSearch, canPerform } = useApp();
 
   const [localSearch, setLocalSearch] = useState('');
   const [filterType, setFilterType] = useState('ALL');
@@ -59,9 +59,9 @@ export const ProjectsPage: React.FC = () => {
           >
             <Download size={13} /> Export CSV
           </button>
-          {currentRole === 'Land Acquisition Officer' ? (
+          {!canPerform('project_create') ? (
             <div style={{ fontSize: '11px', color: '#b45309', backgroundColor: '#fef3c7', padding: '4px 10px', borderRadius: '4px', border: '1px solid #fcd34d' }} title="Project proposal creation is an Implementing Agency function. Switch Dev Role in top header to Agency mode to create proposals.">
-              Agency Creation Restricted (Officer View)
+              Project creation is restricted to Project Agency
             </div>
           ) : (
             <button

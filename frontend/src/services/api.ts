@@ -65,7 +65,59 @@ export interface CreateProjectRequest {
   selectedParcelIds: string[];
 }
 
+import type { AuthenticatedUser } from '../auth/rbac';
+
 const API_BASE_URL = ((import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL) || '/api';
+const AUTH_TOKEN_KEY = 'lams_auth_token';
+
+export function getAuthToken(): string | null {
+  return sessionStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+export function clearAuthToken(): void {
+  sessionStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
+const authenticatedFetch: typeof globalThis.fetch = async (input, init = {}) => {
+  const headers = new Headers(init.headers);
+  const token = getAuthToken();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const response = await globalThis.fetch(input, { ...init, headers });
+  if (response.status === 401 && token) {
+    clearAuthToken();
+    window.dispatchEvent(new Event('lams:auth-expired'));
+  }
+  return response;
+};
+
+const fetch = authenticatedFetch;
+
+export async function loginUser(email: string, password: string): Promise<{ token: string; user: AuthenticatedUser }> {
+  const response = await globalThis.fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || 'Unable to sign in.');
+  sessionStorage.setItem(AUTH_TOKEN_KEY, body.token);
+  return body;
+}
+
+export async function fetchCurrentUser(): Promise<AuthenticatedUser> {
+  const response = await fetch(`${API_BASE_URL}/auth/me`);
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || 'Your session is no longer valid.');
+  return body.user;
+}
+
+export async function logoutUser(): Promise<void> {
+  try {
+    if (getAuthToken()) await fetch(`${API_BASE_URL}/auth/logout`, { method: 'POST' });
+  } finally {
+    clearAuthToken();
+  }
+}
 
 /**
  * Verifies backend and database connectivity health.

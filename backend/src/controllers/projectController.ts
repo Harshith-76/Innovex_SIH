@@ -76,7 +76,17 @@ export async function createProject(req: Request, res: Response, next: NextFunct
       return;
     }
 
-    const createdProject = await projectService.createProject(body);
+    const projectInput = req.authUser?.role === 'project_agency'
+      ? {
+          ...body,
+          status: 'SUBMITTED',
+          verification: undefined,
+          financialStatus: undefined,
+          districtStatus: undefined,
+          createdByUserId: req.authUser.user_id,
+        }
+      : body;
+    const createdProject = await projectService.createProject(projectInput);
 
     res.status(201).json(createdProject);
   } catch (error) {
@@ -101,6 +111,24 @@ export async function updateProject(req: Request, res: Response, next: NextFunct
     if (!body || typeof body !== 'object') {
       res.status(400).json({ error: 'Request body must be a valid JSON object.' });
       return;
+    }
+
+    const role = req.authUser?.role;
+    const protectedFinancialFields = ['financialStatus', 'districtStatus', 'districtVerification', 'approvalStatus', 'approvedAt'];
+    if (role !== 'master' && protectedFinancialFields.some((field) => Object.prototype.hasOwnProperty.call(body, field))) {
+      res.status(403).json({ error: 'You do not have permission to update protected approval fields.' });
+      return;
+    }
+    if (role === 'project_agency') {
+      const allowedAgencyStatuses = new Set(['DRAFT', 'SUBMITTED', 'RESUBMITTED']);
+      if (body.verification || (body.status && !allowedAgencyStatuses.has(String(body.status)))) {
+        res.status(403).json({ error: 'You do not have permission to update acquisition review fields.' });
+        return;
+      }
+    }
+
+    if (role === 'land_acquisition' && body.verification) {
+      body.verification = { ...body.verification, reviewedBy: req.authUser?.name };
     }
 
     const updated = await projectService.updateProject(id, body);
@@ -150,7 +178,7 @@ export async function approveProject(req: Request, res: Response, next: NextFunc
 export async function approveProjectLA(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const body = req.body;
+    const body = { ...(req.body || {}), reviewedBy: req.authUser?.name };
 
     if (!id || !id.trim()) {
       res.status(400).json({ error: 'Project ID parameter is required.' });
