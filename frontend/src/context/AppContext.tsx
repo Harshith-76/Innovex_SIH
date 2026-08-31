@@ -40,6 +40,7 @@ import { featureCollectionToLandParcels } from '../utils/geoAdapter';
 
 export type PageId =
   | 'dashboard'
+  | 'district-dashboard'
   | 'projects'
   | 'project-detail'
   | 'project-route'
@@ -50,6 +51,7 @@ export type PageId =
   | 'documents'
   | 'alerts'
   | 'analytics'
+  | 'district-monitoring'
   | 'administration';
 
 export type JurisdictionLevel = 'National' | 'State' | 'District' | 'Project';

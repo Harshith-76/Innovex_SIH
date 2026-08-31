@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage';
 
 // Pages
 import { DashboardPage } from './pages/DashboardPage';
+import { DistrictDashboardPage } from './pages/DistrictDashboardPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { ProjectRoutePage } from './pages/ProjectRoutePage';
@@ -15,7 +16,6 @@ import { CompensationPage } from './pages/CompensationPage';
 import { AffectedFamiliesPage } from './pages/AffectedFamiliesPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { AlertsPage } from './pages/AlertsPage';
-import { AnalyticsPage } from './pages/AnalyticsPage';
 import { AdministrationPage } from './pages/AdministrationPage';
 
 const MainContent: React.FC = () => {
@@ -25,6 +25,10 @@ const MainContent: React.FC = () => {
     switch (currentPage) {
       case 'dashboard':
         return <DashboardPage />;
+      case 'district-dashboard':
+      case 'district-monitoring':
+      case 'analytics':
+        return <DistrictDashboardPage />;
       case 'projects':
         return <ProjectsPage />;
       case 'project-detail':
@@ -43,8 +47,6 @@ const MainContent: React.FC = () => {
         return <DocumentsPage />;
       case 'alerts':
         return <AlertsPage />;
-      case 'analytics':
-        return <AnalyticsPage />;
       case 'administration':
         return <AdministrationPage />;
       default:

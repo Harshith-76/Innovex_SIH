@@ -38,7 +38,7 @@ export const Sidebar: React.FC = () => {
       icon: <BellRing size={17} />,
       badge: unreadAlertsCount > 0 ? unreadAlertsCount : undefined
     },
-    { id: 'analytics', label: 'Analytics', icon: <BarChart3 size={17} /> },
+    { id: 'district-monitoring', label: 'District Monitoring', icon: <BarChart3 size={17} /> },
     { id: 'administration', label: 'Administration', icon: <ShieldCheck size={17} /> }
   ];
 
@@ -65,7 +65,12 @@ export const Sidebar: React.FC = () => {
         {navItems.map((item) => {
           const isActive =
             currentPage === item.id ||
-            (item.id === 'projects' && (currentPage === 'project-detail' || currentPage === 'project-route'));
+            (item.id === 'dashboard' && currentPage === 'dashboard') ||
+            (item.id === 'projects' && (currentPage === 'project-detail' || currentPage === 'project-route')) ||
+            (item.id === 'district-monitoring' &&
+              (currentPage === 'district-monitoring' ||
+                currentPage === 'analytics' ||
+                currentPage === 'district-dashboard'));
           return (
             <div
               key={item.id}
