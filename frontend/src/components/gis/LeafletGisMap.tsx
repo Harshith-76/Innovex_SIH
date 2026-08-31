@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { LandParcel, ParcelStatus } from '../../types';
-import { Layers, Map, ZoomIn, ZoomOut, Compass } from 'lucide-react';
+import { Layers, Map, ZoomIn, ZoomOut, Compass, Info, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface LeafletGisMapProps {
   parcels: LandParcel[];
@@ -18,23 +18,39 @@ interface LeafletGisMapProps {
   showEmptyState?: boolean;
 }
 
-const getStatusColor = (status: ParcelStatus) => {
-  switch (status) {
-    case 'Acquired':
-      return { fill: '#22c55e', stroke: '#15803d' };
-    case 'Under Acquisition':
-      return { fill: '#3b82f6', stroke: '#1d4ed8' };
-    case 'Notification':
-      return { fill: '#f59e0b', stroke: '#b45309' };
-    case 'Compensation Pending':
-      return { fill: '#fb923c', stroke: '#c2410c' };
-    case 'Possession Pending':
-      return { fill: '#a855f7', stroke: '#7e22ce' };
-    case 'R&R Pending':
-      return { fill: '#ef4444', stroke: '#b91c1c' };
-    default:
-      return { fill: '#94a3b8', stroke: '#475569' };
+/**
+ * Clean, low-opacity parcel styling palette.
+ * Keeps satellite imagery and roads crisp and visible beneath cadastral boundaries.
+ */
+const getParcelStyle = (parcel: LandParcel, isSelected: boolean) => {
+  if (isSelected) {
+    return {
+      color: '#1d4ed8', // Royal Blue
+      weight: 3,
+      fillColor: '#3b82f6',
+      fillOpacity: 0.28,
+      dashArray: undefined,
+    };
   }
+
+  if (parcel.hasHissa && parcel.hissaRecords && parcel.hissaRecords.length > 0) {
+    return {
+      color: '#4f46e5', // Indigo Accent for Hissa Linked Parcels
+      weight: 1.8,
+      fillColor: '#818cf8',
+      fillOpacity: 0.16,
+      dashArray: undefined,
+    };
+  }
+
+  // Standard K-GIS Land Parcel
+  return {
+    color: '#0284c7', // Subtle Sky/Slate Blue
+    weight: 1.2,
+    fillColor: '#38bdf8',
+    fillOpacity: 0.12,
+    dashArray: undefined,
+  };
 };
 
 export const LeafletGisMap: React.FC<LeafletGisMapProps> = ({
@@ -51,7 +67,7 @@ export const LeafletGisMap: React.FC<LeafletGisMapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const polygonLayersRef = useRef<{ [key: string]: L.Polygon }>({});
-  const [mapLayerType, setMapLayerType] = useState<'osm' | 'satellite'>('osm');
+  const [mapLayerType, setMapLayerType] = useState<'osm' | 'satellite'>('satellite'); // Default to Satellite for rich GIS view
   const [showRoadAlignment, setShowRoadAlignment] = useState<boolean>(false);
   const [showGridNumbers, setShowGridNumbers] = useState<boolean>(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
@@ -64,19 +80,18 @@ export const LeafletGisMap: React.FC<LeafletGisMapProps> = ({
 
     // Center on Karnataka overview (or a caller-provided district center)
     const map = L.map(mapContainerRef.current, {
-      center: viewCenter || [12.9716, 77.5946],
-      zoom: 10,
+      center: viewCenter || [12.846, 74.941],
+      zoom: 13,
       zoomControl: false,
       attributionControl: true
     });
 
-    // Add Base Tile Layer
+    // Default to Satellite Imagery for professional GIS context
     const tileLayer = L.tileLayer(
-      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       {
         maxZoom: 19,
-        subdomains: ['a', 'b', 'c'],
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and GIS User Community'
       }
     ).addTo(map);
 
@@ -103,12 +118,12 @@ export const LeafletGisMap: React.FC<LeafletGisMapProps> = ({
       map.removeLayer(tileLayerRef.current);
     }
 
-    let url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    let attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+    let url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+    let attribution = 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and GIS User Community';
 
-    if (mapLayerType === 'satellite') {
-      url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-      attribution = 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community';
+    if (mapLayerType === 'osm') {
+      url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
     }
 
     const newTile = L.tileLayer(url, { maxZoom: 19, attribution }).addTo(map);
@@ -129,29 +144,46 @@ export const LeafletGisMap: React.FC<LeafletGisMapProps> = ({
     const featureGroup = L.featureGroup();
 
     parcels.forEach((parcel) => {
-      const colors = getStatusColor(parcel.acquisitionStatus);
       const isSelected =
         parcel.parcelId === selectedParcelId ||
         (selectedParcelIds?.includes(parcel.parcelId) ?? false);
 
+      const style = getParcelStyle(parcel, isSelected);
+
       const polygon = L.polygon(parcel.coordinates as any, {
-        color: isSelected ? '#1e3a8a' : colors.stroke,
-        weight: isSelected ? 4 : 2,
-        fillColor: isSelected ? '#f59e0b' : colors.fill,
-        fillOpacity: isSelected ? 0.75 : 0.45,
-        dashArray: parcel.acquisitionStatus === 'Notification' ? '5, 5' : undefined
+        color: style.color,
+        weight: style.weight,
+        fillColor: style.fillColor,
+        fillOpacity: style.fillOpacity,
+        dashArray: style.dashArray,
       }).addTo(map);
 
-      // Tooltip with survey details
+      // Tooltip with survey details & Hissa owner indicators
+      const hissaCount = parcel.hissaRecords ? parcel.hissaRecords.length : 0;
+      const ownerNames = parcel.hissaRecords && parcel.hissaRecords.length > 0
+        ? parcel.hissaRecords.map(h => h.owner?.name).filter(Boolean).slice(0, 2).join(', ')
+        : (parcel.ownerName && !parcel.ownerName.includes('Awaiting') ? parcel.ownerName : null);
+
       polygon.bindTooltip(
         `
-        <div style="font-family: 'Inter', sans-serif; font-size: 11.5px; padding: 2px;">
-          <div style="font-weight: 700; color: #0e2238;">Survey No: ${parcel.surveyNumber}</div>
-          <div style="color: #475569;">${parcel.village}, ${parcel.taluk}</div>
-          <div style="color: #0f172a; font-weight: 600; margin-top: 2px;">${parcel.areaAcres} Acres · ${parcel.landType}</div>
-          <div style="margin-top: 4px; font-size: 10px; font-weight: 600; color: ${colors.stroke};">
-            ● ${parcel.acquisitionStatus}
+        <div style="font-family: 'Inter', sans-serif; font-size: 11.5px; padding: 4px 6px; min-width: 180px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <span style="font-weight: 700; color: #0f172a; font-size: 12px;">Survey No: ${parcel.surveyNumber}</span>
+            ${hissaCount > 0 
+              ? `<span style="background: #e0e7ff; color: #4338ca; padding: 1px 5px; border-radius: 3px; font-size: 9.5px; font-weight: 600;">${hissaCount} Hissa${hissaCount > 1 ? 's' : ''}</span>`
+              : `<span style="background: #f1f5f9; color: #64748b; padding: 1px 5px; border-radius: 3px; font-size: 9.5px;">K-GIS Parcel</span>`
+            }
           </div>
+          <div style="color: #64748b; font-size: 10.5px; margin-top: 2px;">${parcel.village}, ${parcel.taluk}</div>
+          <div style="color: #334155; font-size: 11px; margin-top: 3px;">
+            <strong>Extent:</strong> ${parcel.areaAcres} Acres
+          </div>
+          ${ownerNames 
+            ? `<div style="color: #1e293b; font-size: 10.5px; margin-top: 2px; border-top: 1px dashed #cbd5e1; padding-top: 3px;">
+                 <strong>Owner:</strong> ${ownerNames}${hissaCount > 2 ? '...' : ''}
+               </div>` 
+            : ''
+          }
         </div>
         `,
         {
@@ -264,19 +296,6 @@ export const LeafletGisMap: React.FC<LeafletGisMapProps> = ({
             <button
               className="gov-btn gov-btn-sm"
               style={{
-                backgroundColor: mapLayerType === 'osm' ? 'var(--gov-blue-50)' : '#ffffff',
-                color: mapLayerType === 'osm' ? 'var(--gov-blue-700)' : 'var(--gov-slate-700)',
-                border: 'none',
-                justifyContent: 'flex-start',
-                fontSize: '11px'
-              }}
-              onClick={() => setMapLayerType('osm')}
-            >
-              <Map size={13} /> OpenStreetMap
-            </button>
-            <button
-              className="gov-btn gov-btn-sm"
-              style={{
                 backgroundColor: mapLayerType === 'satellite' ? 'var(--gov-blue-50)' : '#ffffff',
                 color: mapLayerType === 'satellite' ? 'var(--gov-blue-700)' : 'var(--gov-slate-700)',
                 border: 'none',
@@ -286,6 +305,19 @@ export const LeafletGisMap: React.FC<LeafletGisMapProps> = ({
               onClick={() => setMapLayerType('satellite')}
             >
               <Layers size={13} /> Satellite Imagery
+            </button>
+            <button
+              className="gov-btn gov-btn-sm"
+              style={{
+                backgroundColor: mapLayerType === 'osm' ? 'var(--gov-blue-50)' : '#ffffff',
+                color: mapLayerType === 'osm' ? 'var(--gov-blue-700)' : 'var(--gov-slate-700)',
+                border: 'none',
+                justifyContent: 'flex-start',
+                fontSize: '11px'
+              }}
+              onClick={() => setMapLayerType('osm')}
+            >
+              <Map size={13} /> OpenStreetMap
             </button>
           </div>
         )}
@@ -304,14 +336,6 @@ export const LeafletGisMap: React.FC<LeafletGisMapProps> = ({
             gap: '6px'
           }}
         >
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={showRoadAlignment}
-              onChange={(e) => setShowRoadAlignment(e.target.checked)}
-            />
-            <span>Corridor Alignment</span>
-          </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
             <input
               type="checkbox"
@@ -377,7 +401,7 @@ export const LeafletGisMap: React.FC<LeafletGisMapProps> = ({
             padding: '10px 14px',
             fontSize: '11px',
             backdropFilter: 'blur(4px)',
-            maxWidth: '320px'
+            maxWidth: '340px'
           }}
         >
           <div
@@ -390,33 +414,69 @@ export const LeafletGisMap: React.FC<LeafletGisMapProps> = ({
               gap: '6px'
             }}
           >
-            <Compass size={13} /> Cadastral Survey Legend
+            <Compass size={13} /> Cadastral Survey & Hissa Legend
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '12px', height: '12px', background: '#22c55e', border: '1px solid #15803d', borderRadius: '2px' }} />
-              <span>Acquired</span>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span
+                style={{
+                  width: '14px',
+                  height: '14px',
+                  backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                  border: '1.5px solid #0284c7',
+                  borderRadius: '2px'
+                }}
+              />
+              <span style={{ color: 'var(--gov-slate-800)' }}>
+                <strong>Land Parcel</strong> (K-GIS Cadastral Polygon)
+              </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '12px', height: '12px', background: '#3b82f6', border: '1px solid #1d4ed8', borderRadius: '2px' }} />
-              <span>Under Acquisition</span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span
+                style={{
+                  width: '14px',
+                  height: '14px',
+                  backgroundColor: 'rgba(129, 140, 248, 0.22)',
+                  border: '1.8px solid #4f46e5',
+                  borderRadius: '2px'
+                }}
+              />
+              <span style={{ color: 'var(--gov-slate-800)' }}>
+                <strong>Hissa-Linked Parcel</strong> (Verified Owner Record)
+              </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '12px', height: '12px', background: '#f59e0b', border: '1px solid #b45309', borderRadius: '2px' }} />
-              <span>Notification</span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span
+                style={{
+                  width: '14px',
+                  height: '14px',
+                  backgroundColor: 'rgba(59, 130, 246, 0.35)',
+                  border: '2px solid #1d4ed8',
+                  borderRadius: '2px'
+                }}
+              />
+              <span style={{ color: 'var(--gov-slate-800)' }}>
+                <strong>Selected Parcel</strong> (Inspector Active)
+              </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '12px', height: '12px', background: '#fb923c', border: '1px solid #c2410c', borderRadius: '2px' }} />
-              <span>Comp. Pending</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '12px', height: '12px', background: '#a855f7', border: '1px solid #7e22ce', borderRadius: '2px' }} />
-              <span>Possession Pending</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '12px', height: '12px', background: '#ef4444', border: '1px solid #b91c1c', borderRadius: '2px' }} />
-              <span>R&R Pending</span>
-            </div>
+          </div>
+
+          {/* Legal / GIS limitation notice */}
+          <div
+            style={{
+              padding: '5px 8px',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '4px',
+              fontSize: '9.5px',
+              color: '#64748b',
+              lineHeight: 1.3
+            }}
+          >
+            <em>Note: Hissa records are mapped to the parent K-GIS parcel. Internal Hissa sub-division boundary geometry is not officially digitized.</em>
           </div>
         </div>
       )}

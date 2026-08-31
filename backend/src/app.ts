@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import parcelRoutes from './routes/parcelRoutes.js';
 import projectRoutes from './routes/projectRoutes.js';
+import hissaRoutes from './routes/hissaRoutes.js';
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use(express.json());
 // Mount API routes under /api
 app.use('/api', parcelRoutes);
 app.use('/api', projectRoutes);
+app.use('/api', hissaRoutes);
 
 // Root informational endpoint
 app.get('/', (_req: Request, res: Response) => {
@@ -35,6 +37,8 @@ app.get('/', (_req: Request, res: Response) => {
       parcelById: '/api/parcels/:id',
       projects: '/api/projects',
       projectById: '/api/projects/:id',
+      hissa: '/api/hissa',
+      hissaByParcel: '/api/hissa/parcel/:parcelId',
     },
   });
 });

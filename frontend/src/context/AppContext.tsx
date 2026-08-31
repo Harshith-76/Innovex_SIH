@@ -10,7 +10,8 @@ import {
   AdminRoleConfig,
   AdminUser,
   ParcelStatus,
-  CompensationStatus
+  CompensationStatus,
+  HissaRecord
 } from '../types';
 import {
   INITIAL_PROJECTS,
@@ -23,7 +24,15 @@ import {
   INITIAL_ADMIN_USERS
 } from '../data/mockData';
 
-import { fetchParcels, fetchProjects, createProject, updateProject as updateProjectApi, ParcelQueryParams, CreateProjectRequest } from '../services/api';
+import {
+  fetchParcels,
+  fetchProjects,
+  fetchHissaRecords,
+  createProject,
+  updateProject as updateProjectApi,
+  ParcelQueryParams,
+  CreateProjectRequest
+} from '../services/api';
 import { featureCollectionToLandParcels } from '../utils/geoAdapter';
 
 export type PageId =
@@ -65,6 +74,9 @@ interface AppContextType {
   parcels: LandParcel[];
   isParcelsLoading: boolean;
   parcelsError: string | null;
+  hissaRecords: HissaRecord[];
+  hissaByParcel: Record<string, HissaRecord[]>;
+  getHissaByParcelId: (parcelId: string) => HissaRecord[];
   reloadParcels: (params?: ParcelQueryParams) => Promise<void>;
   compensationRecords: CompensationRecord[];
   affectedFamilies: AffectedFamily[];
@@ -110,6 +122,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Domain state
   const [projects, setProjects] = useState<LandAcquisitionProject[]>(INITIAL_PROJECTS);
   const [parcels, setParcels] = useState<LandParcel[]>([]);
+  const [hissaRecords, setHissaRecords] = useState<HissaRecord[]>([]);
+  const [hissaByParcel, setHissaByParcel] = useState<Record<string, HissaRecord[]>>({});
   const [isParcelsLoading, setIsParcelsLoading] = useState<boolean>(true);
   const [parcelsError, setParcelsError] = useState<string | null>(null);
   const [compensationRecords, setCompensationRecords] = useState<CompensationRecord[]>(INITIAL_COMPENSATION_RECORDS);
@@ -120,13 +134,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [adminRoles, setAdminRoles] = useState<AdminRoleConfig[]>(INITIAL_ADMIN_ROLES);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>(INITIAL_ADMIN_USERS);
 
+  const getHissaByParcelId = (parcelId: string): HissaRecord[] => {
+    return hissaByParcel[parcelId] || [];
+  };
+
   const reloadParcels = async (params?: ParcelQueryParams) => {
     setIsParcelsLoading(true);
     setParcelsError(null);
     try {
-      const featureCollection = await fetchParcels(params);
+      const [featureCollection, hissaList] = await Promise.all([
+        fetchParcels(params),
+        fetchHissaRecords().catch((hErr) => {
+          console.warn('[AppContext] Could not fetch hissa records:', hErr);
+          return [] as HissaRecord[];
+        })
+      ]);
+
+      const hissaMap: Record<string, HissaRecord[]> = {};
+      for (const h of hissaList) {
+        if (!hissaMap[h.parcel_id]) {
+          hissaMap[h.parcel_id] = [];
+        }
+        hissaMap[h.parcel_id].push(h);
+      }
+
+      setHissaRecords(hissaList);
+      setHissaByParcel(hissaMap);
+
       const adapted = featureCollectionToLandParcels(featureCollection);
-      setParcels(adapted);
+      
+      // Merge Hissa records and resolved owner information into each parcel
+      const enrichedParcels = adapted.map((parcel) => {
+        const associatedHissas = hissaMap[parcel.parcelId] || [];
+        const hasHissa = associatedHissas.length > 0;
+        
+        let ownerDisplay = parcel.ownerName;
+        if (hasHissa) {
+          const validOwnerNames = associatedHissas
+            .map((h) => h.owner?.name)
+            .filter((name): name is string => Boolean(name && name.trim()));
+          
+          if (validOwnerNames.length > 0) {
+            ownerDisplay = validOwnerNames.join(', ');
+          }
+        }
+
+        return {
+          ...parcel,
+          hissaRecords: associatedHissas,
+          hasHissa,
+          ownerName: ownerDisplay
+        };
+      });
+
+      setParcels(enrichedParcels);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       console.error('[AppContext] Error loading real K-GIS parcels:', errorMsg);
@@ -432,6 +493,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         parcels,
         isParcelsLoading,
         parcelsError,
+        hissaRecords,
+        hissaByParcel,
+        getHissaByParcelId,
         reloadParcels,
         compensationRecords,
         affectedFamilies,

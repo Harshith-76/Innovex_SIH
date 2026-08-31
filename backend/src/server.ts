@@ -25,6 +25,7 @@ async function startServer() {
       console.log(`[Server] Health check:  http://localhost:${PORT}/api/health`);
       console.log(`[Server] Parcels API:   http://localhost:${PORT}/api/parcels`);
       console.log(`[Server] Projects API:  http://localhost:${PORT}/api/projects`);
+      console.log(`[Server] Hissa API:     http://localhost:${PORT}/api/hissa`);
     });
 
     // Graceful shutdown handling
