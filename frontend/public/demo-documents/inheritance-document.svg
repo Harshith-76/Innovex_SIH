@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1050" width="100%" height="100%" style="background-color: #fcfcf9; font-family: Arial, sans-serif;">
+  <style>
+    .title { font-size: 20px; font-weight: bold; fill: #1e293b; text-anchor: middle; }
+    .subtitle { font-size: 14px; font-weight: bold; fill: #334155; text-anchor: middle; }
+    .disclaimer { font-size: 18px; font-weight: bold; fill: #dc2626; text-anchor: middle; }
+    .label { font-size: 12px; font-weight: bold; fill: #475569; }
+    .value { font-size: 12px; fill: #0f172a; }
+    .header-bg { fill: #f1f5f9; stroke: #cbd5e1; }
+    .table-border { stroke: #cbd5e1; stroke-width: 1; fill: none; }
+    .watermark { font-size: 32px; font-weight: 900; fill: rgba(220, 38, 38, 0.12); text-anchor: middle; }
+  </style>
+
+  <rect x="20" y="20" width="760" height="1010" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
+  <rect x="20" y="20" width="760" height="40" fill="#fee2e2" stroke="#fca5a5" stroke-width="1" />
+  <text x="400" y="46" class="disclaimer">⚠️ SAMPLE — NOT A GOVERNMENT DOCUMENT ⚠️</text>
+
+  <text x="400" y="90" class="title">REVENUE DEPARTMENT · TAHASILDAR OFFICE MANGALURU</text>
+  <text x="400" y="115" class="subtitle">GENEALOGICAL TREE &amp; SURVIVORSHIP CERTIFICATE (VARISU CERTIFICATE)</text>
+  <line x1="40" y1="130" x2="760" y2="130" stroke="#0f172a" stroke-width="1.5" />
+
+  <rect x="40" y="150" width="720" height="100" class="header-bg" />
+  <text x="60" y="175" class="label">CERTIFICATE NO:</text>
+  <text x="180" y="175" class="value" font-weight="bold">GEN-KA-DK-2018-98402</text>
+
+  <text x="400" y="175" class="label">DATE OF ISSUE:</text>
+  <text x="510" y="175" class="value">05-SEP-2018</text>
+
+  <text x="60" y="210" class="label">DECEASED KHATADAR:</text>
+  <text x="210" y="210" class="value" font-weight="bold">Late Shankara Bhat S/o Anantha Bhat</text>
+
+  <text x="400" y="210" class="label">DATE OF DEMISE:</text>
+  <text x="520" y="210" class="value">12-JUN-2018</text>
+
+  <text x="40" y="290" class="subtitle" text-anchor="start">CLASS-I LEGAL HEIRS &amp; SURVIVING FAMILY MEMBERS</text>
+  <rect x="40" y="305" width="720" height="360" class="table-border" />
+  <line x1="40" y1="340" x2="760" y2="340" stroke="#cbd5e1" stroke-width="1" />
+
+  <text x="60" y="328" class="label">SL NO</text>
+  <text x="140" y="328" class="label">HEIR NAME</text>
+  <text x="380" y="328" class="label">RELATIONSHIP</text>
+  <text x="520" y="328" class="label">AGE</text>
+  <text x="620" y="328" class="label">MARITAL STATUS</text>
+
+  <text x="60" y="370" class="value">1</text>
+  <text x="140" y="370" class="value">Smt. Parvathi Amma</text>
+  <text x="380" y="370" class="value">Wife</text>
+  <text x="520" y="370" class="value">64 Yrs</text>
+  <text x="620" y="370" class="value">Widow</text>
+
+  <text x="60" y="410" class="value">2</text>
+  <text x="140" y="410" class="value">Shri K. Ramesh Bhat</text>
+  <text x="380" y="410" class="value">Son</text>
+  <text x="520" y="410" class="value">41 Yrs</text>
+  <text x="620" y="410" class="value">Married</text>
+
+  <text x="60" y="480" class="label">VILLAGE ACCOUNTANT MAHAZAR REPORT:</text>
+  <text x="60" y="505" class="value">Field inquiry conducted at Kenjaru village. Statements recorded from Grama Panchayat members.</text>
+  <text x="60" y="525" class="value">Confirmed that no other Class-I legal heirs exist for Late Shankara Bhat.</text>
+
+  <rect x="40" y="700" width="720" height="150" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" />
+  <text x="60" y="730" class="label">ISSUING AUTHORITY:</text>
+  <text x="60" y="755" class="value">Tahasildar &amp; Executive Magistrate, Mangaluru Taluk</text>
+  <text x="60" y="775" class="value">Seal of Office of the Tahasildar, Mangaluru, DK</text>
+
+  <g transform="rotate(-30 400 500)">
+    <text x="400" y="480" class="watermark">DEMO DOCUMENT</text>
+    <text x="400" y="530" class="watermark">NOT OFFICIAL GOVERNMENT RECORD</text>
+  </g>
+
+  <rect x="20" y="990" width="760" height="40" fill="#fee2e2" stroke="#fca5a5" stroke-width="1" />
+  <text x="400" y="1015" class="disclaimer">⚠️ SAMPLE — NOT A GOVERNMENT DOCUMENT ⚠️</text>
+</svg>
