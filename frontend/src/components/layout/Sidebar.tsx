@@ -43,8 +43,14 @@ export const Sidebar: React.FC = () => {
             (item.id === 'projects' && (currentPage === 'project-detail' || currentPage === 'project-route')) ||
             (item.id === 'district-monitoring' && (currentPage === 'analytics' || currentPage === 'district-dashboard'));
           return (
-            <button type="button" key={item.id} className={`nav-item ${isActive ? 'active' : ''}`} onClick={() => setCurrentPage(item.id)} style={{ width: '100%', border: 0, textAlign: 'left' }}>
-              {item.icon}<span style={{ flex: 1 }}>{item.label}</span>
+            <button
+              type="button"
+              key={item.id}
+              className={`nav-item ${isActive ? 'active' : ''}`}
+              onClick={() => setCurrentPage(item.id)}
+            >
+              {item.icon}
+              <span className="nav-item-label">{item.label}</span>
               {item.badge !== undefined && <span className="nav-item-badge">{item.badge}</span>}
             </button>
           );

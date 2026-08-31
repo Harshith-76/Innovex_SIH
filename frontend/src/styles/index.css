@@ -130,10 +130,10 @@ html, body, #root {
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 8px;
+  padding: 12px 10px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
 }
 
 .nav-section-title {
@@ -141,33 +141,73 @@ html, body, #root {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #64748b;
-  padding: 10px 10px 4px;
+  color: #94a3b8;
+  padding: 8px 10px 4px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  color: #cbd5e1;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  background-color: #1e3a8a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
   font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none;
+  text-align: left;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  user-select: none;
+}
+
+.nav-item svg {
+  color: #ffffff;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.nav-item-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #ffffff;
 }
 
 .nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.07);
+  background-color: #2563eb;
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.nav-item:hover svg,
+.nav-item:hover .nav-item-label {
   color: #ffffff;
 }
 
 .nav-item.active {
-  background-color: var(--gov-blue-600);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  background-color: #1d4ed8;
+  border: 1px solid #60a5fa;
   color: #ffffff;
-  font-weight: 600;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(29, 78, 216, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.nav-item.active svg,
+.nav-item.active .nav-item-label {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.nav-item:active {
+  transform: scale(0.985);
 }
 
 .nav-item-badge {
@@ -226,7 +266,9 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   height: 100vh;
+  max-height: 100vh;
   overflow: hidden;
 }
 
@@ -234,6 +276,7 @@ html, body, #root {
 .app-header {
   height: var(--header-height);
   min-height: var(--header-height);
+  flex-shrink: 0;
   background: #ffffff;
   border-bottom: 1px solid var(--gov-slate-200);
   display: flex;
@@ -357,7 +400,9 @@ html, body, #root {
 /* Page Scrollable Body */
 .page-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 20px 24px 36px;
   display: flex;
   flex-direction: column;
@@ -1589,9 +1634,9 @@ html, body, #root {
 .lp2-submit-btn {
   width: 100%;
   height: 42px;
-  background: #065f46;
+  background: var(--gov-blue-600);
   color: #ffffff;
-  border: none;
+  border: 1px solid var(--gov-blue-700);
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
@@ -1600,13 +1645,15 @@ html, body, #root {
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.05s ease;
+  transition: background-color 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
   margin-top: 4px;
-  box-shadow: 0 2px 4px rgba(6, 95, 70, 0.2);
+  box-shadow: 0 2px 4px rgba(29, 92, 176, 0.25);
 }
 
 .lp2-submit-btn:hover:not(:disabled) {
-  background: #047857;
+  background: #2563eb;
+  border-color: #1d4ed8;
+  box-shadow: 0 3px 6px rgba(37, 99, 235, 0.35);
 }
 
 .lp2-submit-btn:active:not(:disabled) {
@@ -1646,8 +1693,8 @@ html, body, #root {
   width: 100%;
   height: 42px;
   background: #ffffff;
-  color: #1e293b;
-  border: 1px solid #cbd5e1;
+  color: var(--gov-slate-800);
+  border: 1px solid var(--gov-slate-300);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
@@ -1660,13 +1707,13 @@ html, body, #root {
 }
 
 .lp2-sso-btn:hover {
-  background: #f8fafc;
-  border-color: #94a3b8;
-  color: #065f46;
+  background: var(--gov-blue-50);
+  border-color: var(--gov-blue-600);
+  color: var(--gov-blue-700);
 }
 
 .lp2-sso-icon {
-  color: #059669;
+  color: var(--gov-blue-600);
 }
 
 .lp2-footer {
