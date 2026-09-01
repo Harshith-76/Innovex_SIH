@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export const AffectedFamiliesPage: React.FC = () => {
-  const { projects, parcels, affectedFamilies, searchQuery: globalSearch } = useApp();
+  const { projects, parcels, affectedFamilies, searchQuery: globalSearch, t } = useApp();
 
   const [filterType, setFilterType] = useState<string>('ALL');
   const [filterRrStatus, setFilterRrStatus] = useState<string>('ALL');
@@ -141,9 +141,9 @@ export const AffectedFamiliesPage: React.FC = () => {
       {/* Header */}
       <div className="page-header-row">
         <div>
-          <h1 className="page-title">Landowner Acquisition & Compensation</h1>
+          <h1 className="page-title">{t('landowner.title', 'Landowner Directory & Compensation')}</h1>
           <p className="page-subtitle">
-            Landowner parcel ownership directory, GIS satellite land mapping, acquired land area inside parcels, allocated compensation awards, and status.
+            {t('landowner.subtitle', 'View affected landowners, compensation records, bank account details, and disbursement status.')}
           </p>
         </div>
       </div>

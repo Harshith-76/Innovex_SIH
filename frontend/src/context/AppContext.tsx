@@ -41,6 +41,7 @@ import {
   clearAuthToken
 } from '../services/api';
 import { featureCollectionToLandParcels } from '../utils/geoAdapter';
+import { translateKey, type Language } from '../i18n/translations';
 import {
   canAccessPage,
   firstAuthorizedPage,
@@ -54,6 +55,7 @@ import {
 } from '../auth/rbac';
 
 export type { PageId } from '../auth/rbac';
+export type { Language } from '../i18n/translations';
 
 export type JurisdictionLevel = 'National' | 'State' | 'District' | 'Project';
 
@@ -82,6 +84,12 @@ interface AppContextType {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   
+  // Localization
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  toggleLanguage: () => void;
+  t: (key: string, fallback?: string) => string;
+
   // Data Entities
   projects: LandAcquisitionProject[];
   approvedProjectsLA: any[];
@@ -136,6 +144,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedJurisdictionName, setSelectedJurisdictionName] = useState<string>('Karnataka');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
+  const [language, setLanguageState] = useState<Language>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('lams_language') : null;
+    return saved === 'kn' ? 'kn' : 'en';
+  });
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang);
+    try {
+      localStorage.setItem('lams_language', lang);
+    } catch (e) {
+      console.warn('Could not persist language preference:', e);
+    }
+  };
+
+  const toggleLanguage = () => {
+    const next = language === 'en' ? 'kn' : 'en';
+    setLanguage(next);
+  };
+
+  const t = (key: string, fallback?: string): string => {
+    return translateKey(key, language, fallback);
+  };
+
   // Domain state
   const [projects, setProjects] = useState<LandAcquisitionProject[]>(INITIAL_PROJECTS);
   const [approvedProjectsLA, setApprovedProjectsLA] = useState<any[]>([]);
@@ -161,15 +192,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const requestedPage = pageFromPath(window.location.pathname);
     const nextPage = requestedPage && canAccessPage(user.role, requestedPage)
       ? requestedPage
-      : requestedPage
-        ? 'access-denied'
-        : firstAuthorizedPage(user.role);
+      : firstAuthorizedPage(user.role);
     setCurrentPageState(nextPage);
     window.history.replaceState({}, '', PAGE_PATHS[nextPage]);
   };
 
   const setCurrentPage = (page: PageId) => {
-    const nextPage = canAccessPage(currentUser?.role, page) ? page : 'access-denied';
+    const nextPage = canAccessPage(currentUser?.role, page)
+      ? page
+      : (currentUser ? firstAuthorizedPage(currentUser.role) : 'access-denied');
     setCurrentPageState(nextPage);
     window.history.pushState({}, '', PAGE_PATHS[nextPage]);
   };
@@ -213,7 +244,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     const handlePopState = () => {
       const page = pageFromPath(window.location.pathname);
-      setCurrentPageState(page && canAccessPage(currentUser?.role, page) ? page : 'access-denied');
+      const nextPage = page && canAccessPage(currentUser?.role, page)
+        ? page
+        : (currentUser ? firstAuthorizedPage(currentUser.role) : 'access-denied');
+      setCurrentPageState(nextPage);
+      if (nextPage !== page) {
+        window.history.replaceState({}, '', PAGE_PATHS[nextPage]);
+      }
     };
     restoreSession();
     window.addEventListener('lams:auth-expired', expireSession);
@@ -676,7 +713,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         login,
         logout,
         canAccess,
-        canPerform
+        canPerform,
+        language,
+        setLanguage,
+        toggleLanguage,
+        t
       }}
     >
       {children}

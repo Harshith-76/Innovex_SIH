@@ -46,7 +46,7 @@ export type PageId =
   | 'access-denied';
 
 const ROLE_PERMISSIONS: Record<AuthRole, readonly Permission[] | '*'> = {
-  user: [],
+  user: ['affected_families'],
   project_agency: ['acquisition_window', 'projects_directory', 'gis_land_parcels', 'project_create', 'project_update'],
   land_acquisition: ['acquisition_window', 'projects_directory', 'gis_land_parcels', 'project_update', 'acquisition_review'],
   finance_officer: ['approved_projects', 'gis_land_parcels', 'financial_approval'],
@@ -89,13 +89,16 @@ export const PAGE_PATHS: Record<PageId, string> = {
 
 const PATH_PAGES: Record<string, PageId> = {
   '/acquisition-window': 'workflow',
+  '/acquisition': 'workflow',
   '/projects': 'projects',
   '/projects/detail': 'project-detail',
   '/projects/route': 'project-route',
   '/gis-land-parcels': 'gis-parcels',
+  '/gis': 'gis-parcels',
   '/approved-projects': 'compensation',
   '/district-monitoring': 'district-monitoring',
   '/affected-families': 'affected-families',
+  '/landowner': 'affected-families',
   '/documents': 'documents',
   '/alerts': 'alerts',
   '/administration': 'administration',
@@ -103,7 +106,7 @@ const PATH_PAGES: Record<string, PageId> = {
 };
 
 export const ROLE_LABELS: Record<AuthRole, string> = {
-  user: 'System User',
+  user: 'Generic User',
   project_agency: 'Project Agency',
   land_acquisition: 'Land Acquisition Officer',
   finance_officer: 'Finance Officer',
@@ -129,6 +132,6 @@ export function pageFromPath(pathname: string): PageId | undefined {
 }
 
 export function firstAuthorizedPage(role: AuthRole): PageId {
-  const preferred: PageId[] = ['workflow', 'projects', 'compensation', 'gis-parcels', 'district-monitoring'];
+  const preferred: PageId[] = ['workflow', 'projects', 'compensation', 'gis-parcels', 'district-monitoring', 'affected-families'];
   return preferred.find((page) => canAccessPage(role, page)) || 'access-denied';
 }

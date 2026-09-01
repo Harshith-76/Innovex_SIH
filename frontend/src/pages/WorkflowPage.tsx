@@ -51,7 +51,8 @@ export const WorkflowPage: React.FC = () => {
     setCurrentPage,
     updateProjectVerification,
     currentRole,
-    canPerform
+    canPerform,
+    t
   } = useApp();
   const canReviewProjects = canPerform('acquisition_review');
 
@@ -292,10 +293,10 @@ export const WorkflowPage: React.FC = () => {
             )}
           </div>
           <h1 className="page-title" style={{ marginTop: '6px', fontSize: '20px', letterSpacing: '-0.01em' }}>
-            LAND ACQUISITION OFFICER — ACQUISITION WINDOW
+            {t('workflow.title', 'ACQUISITION WINDOW')}
           </h1>
           <p className="page-subtitle">
-            Review, verify and process land acquisition proposals submitted by implementing agencies.
+            {t('workflow.subtitle', 'Review, verify and process land acquisition proposals submitted by implementing agencies.')}
           </p>
         </div>
 

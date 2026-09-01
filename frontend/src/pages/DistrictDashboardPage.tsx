@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 
 export const DistrictDashboardPage: React.FC = () => {
-  const { setCurrentPage } = useApp();
+  const { setCurrentPage, t } = useApp();
 
   // District selector / jurisdiction
   const [districtFilter, setDistrictFilter] = useState<string>('ALL');
@@ -165,7 +165,7 @@ export const DistrictDashboardPage: React.FC = () => {
       <div className="page-header-row">
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 className="page-title">District Monitoring</h1>
+            <h1 className="page-title">{t('district.title', 'District Monitoring')}</h1>
             <div
               style={{
                 display: 'inline-flex',
@@ -187,7 +187,7 @@ export const DistrictDashboardPage: React.FC = () => {
             </div>
           </div>
           <p className="page-subtitle">
-            District-level project verification, land acquisition progress, compensation and R&R monitoring.
+            {t('district.subtitle', 'District-level project verification, land acquisition progress, compensation and R&R monitoring.')}
           </p>
         </div>
 

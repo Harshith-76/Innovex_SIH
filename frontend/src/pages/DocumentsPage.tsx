@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 export const DocumentsPage: React.FC = () => {
-  const { documents, addDocument, activeProject, searchQuery: globalSearch } = useApp();
+  const { documents, addDocument, activeProject, searchQuery: globalSearch, t } = useApp();
 
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [localSearch, setLocalSearch] = useState<string>('');
@@ -74,9 +74,9 @@ export const DocumentsPage: React.FC = () => {
       {/* Header */}
       <div className="page-header-row">
         <div>
-          <h1 className="page-title">Documents & Statutory Records Repository</h1>
+          <h1 className="page-title">{t('documents.title', 'DOCUMENTS & RECORDS REPOSITORY')}</h1>
           <p className="page-subtitle">
-            Digitally signed land records, Section 3A/3D gazettes, SIA survey reports, award declarations and possession mahazars
+            {t('documents.subtitle', 'Centralized repository of land notices, gazette publications, mutation records, and SIA reports.')}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -84,7 +84,7 @@ export const DocumentsPage: React.FC = () => {
             className="gov-btn gov-btn-primary"
             onClick={() => setIsUploadModalOpen(true)}
           >
-            <UploadCloud size={14} /> Upload Statutory Document
+            <UploadCloud size={14} /> {t('documents.btn_upload', 'Upload New Document')}
           </button>
         </div>
       </div>
@@ -146,15 +146,15 @@ export const DocumentsPage: React.FC = () => {
           <table className="gov-table">
             <thead>
               <tr>
-                <th>Document Title</th>
-                <th>Category</th>
-                <th>Project Corridor</th>
-                <th style={{ textAlign: 'center' }}>Version</th>
-                <th>Format & Size</th>
-                <th>Uploaded By</th>
-                <th>Timestamp</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'center' }}>Action</th>
+                <th>{t('documents.col_title', 'DOCUMENT TITLE')}</th>
+                <th>{t('documents.col_type', 'DOCUMENT TYPE')}</th>
+                <th>{t('documents.col_project', 'PROJECT CORRIDOR')}</th>
+                <th style={{ textAlign: 'center' }}>{t('documents.col_version', 'VERSION')}</th>
+                <th>{t('documents.col_format', 'FORMAT & SIZE')}</th>
+                <th>{t('documents.col_by', 'UPLOADED BY')}</th>
+                <th>{t('documents.col_date', 'UPLOADED DATE')}</th>
+                <th>{t('common.status', 'STATUS')}</th>
+                <th style={{ textAlign: 'center' }}>{t('common.actions', 'ACTION')}</th>
               </tr>
             </thead>
             <tbody>

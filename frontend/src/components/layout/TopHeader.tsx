@@ -7,7 +7,8 @@ import {
   Shield,
   Building2,
   RefreshCw,
-  LogOut
+  LogOut,
+  Globe
 } from 'lucide-react';
 import { useApp, PageId, JurisdictionLevel } from '../../context/AppContext';
 import { NotificationDrawer } from '../common/NotificationDrawer';
@@ -45,7 +46,10 @@ export const TopHeader: React.FC = () => {
     currentRole,
     currentUser,
     logout,
-    canAccess
+    canAccess,
+    language,
+    toggleLanguage,
+    t
   } = useApp();
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -61,7 +65,7 @@ export const TopHeader: React.FC = () => {
       <div className="header-left">
         <div className="breadcrumbs">
           <span className="breadcrumb-item">
-            LAMS Portal
+            {t('app.portal', 'LAMS Portal')}
           </span>
           <ChevronRight size={12} className="breadcrumb-separator" />
           <span
@@ -70,7 +74,7 @@ export const TopHeader: React.FC = () => {
               if (currentPage === 'project-detail') setCurrentPage('projects');
             }}
           >
-            {PAGE_NAMES[currentPage]}
+            {t(`page.${currentPage}`, PAGE_NAMES[currentPage])}
           </span>
           {currentPage === 'project-detail' && activeProject && (
             <>
@@ -88,7 +92,7 @@ export const TopHeader: React.FC = () => {
           <input
             type="text"
             className="header-search-input"
-            placeholder="Search Survey No., Project Code, Khata No., Village, Beneficiary..."
+            placeholder={t('header.search_placeholder', 'Search Survey No., Project Code, Khata No., Village, Beneficiary...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -103,7 +107,7 @@ export const TopHeader: React.FC = () => {
               }}
               onClick={() => setSearchQuery('')}
             >
-              Clear
+              {t('header.search_clear', 'Clear')}
             </button>
           )}
         </div>
@@ -131,7 +135,7 @@ export const TopHeader: React.FC = () => {
               handleJurisdictionChange(level, name);
             }}
           >
-            <option value="State:Karnataka">State: Karnataka</option>
+            <option value="State:Karnataka">{t('header.state_karnataka', 'State: Karnataka')}</option>
             <option value="District:Bengaluru Rural">District: Bengaluru Rural</option>
             <option value="District:Vijayapura">District: Vijayapura</option>
             <option value="District:Tumakuru">District: Tumakuru</option>
@@ -139,17 +143,28 @@ export const TopHeader: React.FC = () => {
           </select>
         </div>
 
+        {/* Global Translate Control */}
+        <button
+          type="button"
+          className="translate-btn"
+          title={t('header.translate_title', 'Toggle Language (English / ಕನ್ನಡ)')}
+          onClick={toggleLanguage}
+        >
+          <Globe size={13} color="var(--gov-blue-700)" />
+          <span>{language === 'en' ? t('header.translate_en', 'Translate (ಕನ್ನಡ)') : t('header.translate_kn', 'Translate (English)')}</span>
+        </button>
+
         {/* Official Badge */}
         <div className="jurisdiction-tag" title="Authenticated Indian Gov Session">
           <Shield size={13} />
-          <span>NIC-Bhoomi Gateway</span>
+          <span>{t('header.nic_gateway', 'NIC-Bhoomi Gateway')}</span>
         </div>
 
         {/* Notifications Icon Button */}
         {canAccess('alerts') && <div style={{ position: 'relative' }}>
           <button
             className="header-icon-btn"
-            title="Notifications & Operational Alerts"
+            title={t('header.notifications_title', 'Notifications & Operational Alerts')}
             onClick={() => setIsNotificationOpen(!isNotificationOpen)}
           >
             <Bell size={16} />
@@ -193,11 +208,11 @@ export const TopHeader: React.FC = () => {
               {currentUser?.name}
             </div>
             <div style={{ fontSize: '9.5px', color: 'var(--gov-slate-500)' }}>
-              {ROLE_LABELS[currentRole]}
+              {t(`role.${currentRole}`, ROLE_LABELS[currentRole])}
             </div>
           </div>
         </div>
-        <button className="header-icon-btn" title="Sign out" onClick={() => void logout()}>
+        <button className="header-icon-btn" title={t('header.sign_out', 'Sign out')} onClick={() => void logout()}>
           <LogOut size={16} />
         </button>
       </div>

@@ -22,7 +22,8 @@ export const GisParcelsPage: React.FC = () => {
     activeParcel,
     projects,
     selectedProjectId,
-    setSelectedProjectId
+    setSelectedProjectId,
+    t
   } = useApp();
 
   // Filters

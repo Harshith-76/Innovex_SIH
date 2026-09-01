@@ -18,7 +18,7 @@ import { AlertsPage } from './pages/AlertsPage';
 import { AdministrationPage } from './pages/AdministrationPage';
 
 const MainContent: React.FC = () => {
-  const { currentPage, canAccess, setCurrentPage, currentRole } = useApp();
+  const { currentPage, canAccess, setCurrentPage, currentRole, t } = useApp();
 
   const renderCurrentPage = () => {
     switch (currentPage) {
@@ -50,9 +50,9 @@ const MainContent: React.FC = () => {
         return (
           <div className="page-body">
             <div className="gov-card" style={{ maxWidth: 620, margin: '64px auto', padding: 32, textAlign: 'center' }}>
-              <h1 className="page-title">Access Denied</h1>
+              <h1 className="page-title">{t('page.access-denied', 'Access Denied')}</h1>
               <p className="page-subtitle" style={{ marginTop: 10 }}>
-                You do not have permission to access this module.
+                {t('page.access-denied_message', 'You do not have permission to access this module.')}
               </p>
               {currentRole !== 'user' && (
                 <button
@@ -64,7 +64,7 @@ const MainContent: React.FC = () => {
                     if (fallback) setCurrentPage(fallback);
                   }}
                 >
-                  Go to an authorized module
+                  {t('page.go_authorized', 'Go to an authorized module')}
                 </button>
               )}
             </div>

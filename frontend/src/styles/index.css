@@ -41,7 +41,7 @@
 
   --sidebar-width: 260px;
   --header-height: 56px;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Kannada', 'Kannada Sangam MN', 'Tunga', 'Kaveri', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -366,6 +366,32 @@ html, body, #root {
   font-size: 11.5px;
   font-weight: 600;
   color: var(--gov-blue-700);
+}
+
+.translate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--gov-blue-50);
+  border: 1px solid var(--gov-blue-200);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--gov-navy-900);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease-in-out;
+}
+
+.translate-btn:hover {
+  background: var(--gov-blue-100);
+  border-color: var(--gov-blue-300);
+  color: var(--gov-blue-900);
+}
+
+.translate-btn:active {
+  transform: scale(0.97);
 }
 
 .header-icon-btn {

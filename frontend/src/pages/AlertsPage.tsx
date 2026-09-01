@@ -22,7 +22,8 @@ export const AlertsPage: React.FC = () => {
     resolveAlert,
     navigateToProject,
     navigateToParcelInGis,
-    searchQuery: globalSearch
+    searchQuery: globalSearch,
+    t
   } = useApp();
 
   const [filterSeverity, setFilterSeverity] = useState<string>('ALL');
@@ -62,9 +63,9 @@ export const AlertsPage: React.FC = () => {
       {/* Header */}
       <div className="page-header-row">
         <div>
-          <h1 className="page-title">Operational Alerts & Statutory Notices</h1>
+          <h1 className="page-title">{t('alerts.title', 'OPERATIONAL ALERTS & NOTIFICATIONS')}</h1>
           <p className="page-subtitle">
-            Real-time administrative alerts across overdue compensation, lapsing Section 3A notifications, possession bottlenecks and R&R disputes
+            {t('alerts.subtitle', 'System alerts, high risk acquisition warnings, boundary disputes, and pending reviews.')}
           </p>
         </div>
       </div>

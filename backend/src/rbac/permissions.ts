@@ -26,7 +26,7 @@ export type Permission =
   | 'district_review';
 
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[] | '*'> = {
-  user: [],
+  user: ['affected_families'],
   project_agency: [
     'acquisition_window',
     'projects_directory',

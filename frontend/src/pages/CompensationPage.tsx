@@ -458,6 +458,7 @@ export const CompensationPage: React.FC = () => {
   const {
     projects,
     searchQuery: globalSearch,
+    t
   } = useApp();
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -491,9 +492,9 @@ export const CompensationPage: React.FC = () => {
     <div className="page-body">
       <div className="page-header-row">
         <div>
-          <h1 className="page-title">Approved Projects</h1>
+          <h1 className="page-title">{t('compensation.title', 'APPROVED PROJECTS')}</h1>
           <p className="page-subtitle">
-            Projects stored in the Project_Approval_LA database collection approved by the Land Acquisition Officer.
+            {t('compensation.subtitle', 'Projects stored in the Project_Approval_LA database collection approved by the Land Acquisition Officer.')}
           </p>
         </div>
       </div>

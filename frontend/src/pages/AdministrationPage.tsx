@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 export const AdministrationPage: React.FC = () => {
-  const { adminRoles, adminUsers } = useApp();
+  const { adminRoles, adminUsers, t } = useApp();
   const [activeTab, setActiveTab] = useState<'roles' | 'users' | 'system'>('roles');
   const [selectedRole, setSelectedRole] = useState<AdminRoleConfig | null>(null);
   const [userSearch, setUserSearch] = useState('');
@@ -37,9 +37,9 @@ export const AdministrationPage: React.FC = () => {
       {/* Header */}
       <div className="page-header-row">
         <div>
-          <h1 className="page-title">Administration & Role-Based Access Control (RBAC)</h1>
+          <h1 className="page-title">{t('admin.title', 'ADMINISTRATION & ACCESS CONTROL')}</h1>
           <p className="page-subtitle">
-            Multi-tier governance model connecting Central Ministries, State Secretariats, District Collectorates, CALA Authorities, and PIAs
+            {t('admin.subtitle', 'Manage user roles, system permissions matrix, district assignments, and security audit logs.')}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>

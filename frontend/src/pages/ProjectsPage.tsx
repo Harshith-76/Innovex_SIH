@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export const ProjectsPage: React.FC = () => {
-  const { projects, openProjectDetail, openProjectRoute, searchQuery: globalSearch, canPerform } = useApp();
+  const { projects, openProjectDetail, openProjectRoute, searchQuery: globalSearch, canPerform, t } = useApp();
 
   const [localSearch, setLocalSearch] = useState('');
   const [filterType, setFilterType] = useState('ALL');
@@ -47,9 +47,9 @@ export const ProjectsPage: React.FC = () => {
       {/* Page Header */}
       <div className="page-header-row">
         <div>
-          <h1 className="page-title" style={{ letterSpacing: '0.02em' }}>PROJECTS DIRECTORY</h1>
+          <h1 className="page-title" style={{ letterSpacing: '0.02em' }}>{t('projects.title', 'PROJECTS DIRECTORY')}</h1>
           <p className="page-subtitle">
-            Manage land acquisition projects, project scope, route alignment and acquisition progress.
+            {t('projects.subtitle', 'Manage land acquisition projects, project scope, route alignment and acquisition progress.')}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -57,18 +57,18 @@ export const ProjectsPage: React.FC = () => {
             className="gov-btn gov-btn-secondary"
             onClick={() => alert('Exporting project directory in NIC Excel format...')}
           >
-            <Download size={13} /> Export CSV
+            <Download size={13} /> {t('projects.btn_export', 'EXPORT CSV')}
           </button>
           {!canPerform('project_create') ? (
             <div style={{ fontSize: '11px', color: '#b45309', backgroundColor: '#fef3c7', padding: '4px 10px', borderRadius: '4px', border: '1px solid #fcd34d' }} title="Project proposal creation is an Implementing Agency function. Switch Dev Role in top header to Agency mode to create proposals.">
-              Project creation is restricted to Project Agency
+              {t('projects.restricted_agency', 'Project creation is restricted to Project Agency')}
             </div>
           ) : (
             <button
               className="gov-btn gov-btn-primary"
               onClick={() => setIsNewProjectModalOpen(true)}
             >
-              <Plus size={14} /> REGISTER NEW PROJECT
+              <Plus size={14} /> {t('projects.btn_register', 'REGISTER NEW PROJECT')}
             </button>
           )}
         </div>
@@ -84,7 +84,7 @@ export const ProjectsPage: React.FC = () => {
               type="text"
               className="gov-input"
               style={{ width: '100%', paddingLeft: '32px' }}
-              placeholder="Search by project code, title, district, or PIA agency..."
+              placeholder={t('projects.search_placeholder', 'Search by project code, title, district, or PIA agency...')}
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}
             />
@@ -93,7 +93,7 @@ export const ProjectsPage: React.FC = () => {
           {/* Filter Selects */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600, color: 'var(--gov-slate-600)' }}>
-              <Filter size={12} /> FILTERS:
+              <Filter size={12} /> {t('common.filter', 'FILTERS:')}
             </div>
 
             <select
@@ -146,11 +146,11 @@ export const ProjectsPage: React.FC = () => {
               onChange={(e) => setFilterStatus(e.target.value)}
               style={{ minWidth: '120px' }}
             >
-              <option value="ALL">All Status</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Pending">Pending</option>
-              <option value="Completed">Completed</option>
-              <option value="Delayed">Delayed</option>
+              <option value="ALL">{t('projects.filter_all', 'All Statuses')}</option>
+              <option value="In Progress">{t('projects.filter_in_progress', 'In Progress')}</option>
+              <option value="Pending">{t('projects.filter_pending', 'Pending')}</option>
+              <option value="Completed">{t('projects.filter_completed', 'Completed')}</option>
+              <option value="Delayed">{t('projects.filter_delayed', 'Delayed')}</option>
             </select>
 
             {(localSearch || filterDistrict !== 'ALL' || filterType !== 'ALL' || filterStage !== 'ALL' || filterStatus !== 'ALL') && (
@@ -186,7 +186,7 @@ export const ProjectsPage: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FolderKanban size={16} color="var(--gov-navy-800)" />
             <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gov-navy-900)', letterSpacing: '0.03em' }}>
-              REGISTERED LAND ACQUISITION PROJECTS ({filteredProjects.length})
+              {t('projects.registered_title', 'REGISTERED LAND ACQUISITION PROJECTS')} ({filteredProjects.length})
             </span>
           </div>
           <span style={{ fontSize: '11px', color: 'var(--gov-slate-500)' }}>
@@ -198,15 +198,15 @@ export const ProjectsPage: React.FC = () => {
           <table className="gov-table">
             <thead>
               <tr>
-                <th style={{ width: '120px' }}>Project Code</th>
-                <th>Project Title & Scope</th>
-                <th>District / Location</th>
-                <th style={{ width: '120px' }}>Required Land</th>
-                <th style={{ width: '110px' }}>Progress</th>
-                <th style={{ width: '130px' }}>Current Stage</th>
-                <th style={{ width: '100px' }}>Status</th>
-                <th style={{ width: '100px' }}>Risk Level</th>
-                <th style={{ width: '160px', textAlign: 'right' }}>Actions</th>
+                <th style={{ width: '120px' }}>{t('projects.col_code', 'PROJECT CODE')}</th>
+                <th>{t('projects.col_title', 'PROJECT TITLE & SCOPE')}</th>
+                <th>{t('projects.col_district', 'DISTRICT / LOCATION')}</th>
+                <th style={{ width: '120px' }}>{t('projects.col_land', 'REQUIRED LAND')}</th>
+                <th style={{ width: '110px' }}>{t('projects.col_progress', 'PROGRESS')}</th>
+                <th style={{ width: '130px' }}>{t('projects.col_stage', 'CURRENT STAGE')}</th>
+                <th style={{ width: '100px' }}>{t('projects.col_status', 'STATUS')}</th>
+                <th style={{ width: '100px' }}>{t('projects.col_risk', 'RISK LEVEL')}</th>
+                <th style={{ width: '160px', textAlign: 'right' }}>{t('common.actions', 'ACTIONS')}</th>
               </tr>
             </thead>
             <tbody>
