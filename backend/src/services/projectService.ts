@@ -380,34 +380,94 @@ export async function getApprovedProjectsLA(): Promise<any[]> {
 /**
  * Approves a project and stores it in the Project_Approved_Project collection.
  */
-export async function approveProject(id: string): Promise<any | null> {
+export async function approveProject(id: string, financialData?: any): Promise<any | null> {
+  const approvalCol = getProjectApprovalLACollection<ProjectDocument>();
   const collection = getProjectsCollection<ProjectDocument>();
   const approvedCollection = getApprovedProjectsCollection<ProjectDocument>();
   const trimmedId = id.trim();
 
-  let filter: Filter<ProjectDocument> = {};
+  let mongoFilter: Filter<ProjectDocument> = {};
   if (ObjectId.isValid(trimmedId)) {
-    filter = { _id: new ObjectId(trimmedId) };
+    mongoFilter = {
+      $or: [
+        { _id: new ObjectId(trimmedId) },
+        { sourceProjectId: trimmedId },
+        { code: trimmedId },
+        { projectCode: trimmedId }
+      ]
+    } as any;
   } else {
-    filter = { code: trimmedId };
+    mongoFilter = {
+      $or: [
+        { sourceProjectId: trimmedId },
+        { code: trimmedId },
+        { projectCode: trimmedId }
+      ]
+    } as any;
   }
 
-  const result = await collection.findOneAndUpdate(
-    filter,
-    { $set: { financialStatus: 'Approved', updatedAt: new Date() } as any },
+  const now = new Date();
+  const updatePayload: Record<string, any> = {
+    financialStatus: 'Approved',
+    approvalStatus: 'APPROVED',
+    districtStatus: 'PENDING_REVIEW',
+    districtVerification: {
+      status: 'PENDING_REVIEW'
+    },
+    approvedAt: now.toISOString(),
+    forwardedAt: now.toISOString(),
+    updatedAt: now
+  };
+
+  if (financialData?.totalCompensationAssessedCr) {
+    updatePayload.totalCompensationAssessedCr = Number(financialData.totalCompensationAssessedCr) || 0;
+  }
+  if (financialData?.calculatedParcels) {
+    updatePayload.calculatedParcels = financialData.calculatedParcels;
+  }
+  if (financialData?.approvedBy) {
+    updatePayload.approvedBy = financialData.approvedBy;
+  }
+
+  // Update in Project_Approval_LA
+  let result = await approvalCol.findOneAndUpdate(
+    mongoFilter,
+    { $set: updatePayload as any },
     { returnDocument: 'after' }
   );
 
-  if (!result) {
+  // Update in main Projects collection if present
+  await collection.updateOne(
+    mongoFilter,
+    { $set: updatePayload as any }
+  );
+
+  let docToSave = result;
+  if (!docToSave) {
+    docToSave = await collection.findOne(mongoFilter);
+  }
+
+  if (!docToSave) {
     return null;
   }
 
-  // Insert into approved collection (using upsert to avoid duplicates)
+  // Insert/Upsert into Project_Approved_Project collection
+  const approvedDoc = {
+    ...docToSave,
+    financialStatus: 'Approved',
+    approvalStatus: 'APPROVED',
+    districtStatus: 'PENDING_REVIEW',
+    districtVerification: {
+      status: 'PENDING_REVIEW'
+    },
+    updatedAt: now
+  };
+
   await approvedCollection.updateOne(
-    { _id: result._id },
-    { $set: result },
+    { _id: docToSave._id },
+    { $set: approvedDoc as any },
     { upsert: true }
   );
 
-  return formatProject(result as ProjectDocument);
+  return formatProject(docToSave as ProjectDocument);
 }

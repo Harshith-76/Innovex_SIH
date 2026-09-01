@@ -22,7 +22,7 @@ const PAGE_NAMES: Record<PageId, string> = {
   'gis-parcels': 'GIS & Land Parcels',
   workflow: 'Acquisition Window',
   compensation: 'Compensation Management',
-  'affected-families': 'Affected Families & R&R',
+  'affected-families': 'Landowner Directory & Compensation',
   documents: 'Documents & Records Repository',
   alerts: 'Operational Alerts & Notifications',
   analytics: 'District Monitoring',

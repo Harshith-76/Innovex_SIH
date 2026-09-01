@@ -151,13 +151,14 @@ export async function updateProject(req: Request, res: Response, next: NextFunct
 export async function approveProject(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
+    const body = req.body;
 
     if (!id || !id.trim()) {
       res.status(400).json({ error: 'Project ID parameter is required.' });
       return;
     }
 
-    const approved = await projectService.approveProject(id);
+    const approved = await projectService.approveProject(id, body);
 
     if (!approved) {
       res.status(404).json({ error: `Project not found with ID or code: ${id}` });
