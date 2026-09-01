@@ -303,14 +303,15 @@ export async function fetchHissaByParcelId(parcelId: string): Promise<any[]> {
 }
 
 /**
- * Approves a project and stores it in the approved collection.
+ * Approves a project and stores it in the Project_Approved_Project collection.
  */
-export async function approveProject(id: string): Promise<any> {
+export async function approveProject(id: string, financialData?: Record<string, any>): Promise<any> {
   const response = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(id.trim())}/approve`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
+    body: JSON.stringify(financialData || {}),
   });
 
   if (!response.ok) {
