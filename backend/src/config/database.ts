@@ -10,6 +10,8 @@ const HISSA_COLLECTION = 'hissa_records';
 const OWNERS_COLLECTION = 'owners';
 const APPROVED_PROJECTS_COLLECTION = 'Project_Approved_Project';
 const PROJECT_APPROVAL_LA_COLLECTION = 'Project_Approval_LA';
+const VERIFICATION_AUDIT_COLLECTION = 'district_verification_audit';
+const USERS_COLLECTION = 'users';
 
 /**
  * Establishes and caches the MongoDB Atlas connection.
@@ -109,6 +111,18 @@ export function getOwnersCollection<T extends Document = Document>(): Collection
  */
 export function getProjectApprovalLACollection<T extends Document = Document>(): Collection<T> {
   return getDb().collection<T>(PROJECT_APPROVAL_LA_COLLECTION);
+}
+
+/**
+ * Returns the typed district_verification_audit collection from the active database.
+ */
+export function getVerificationAuditCollection<T extends Document = Document>(): Collection<T> {
+  return getDb().collection<T>(VERIFICATION_AUDIT_COLLECTION);
+}
+
+/** Returns the authentication users collection. */
+export function getUsersCollection<T extends Document = Document>(): Collection<T> {
+  return getDb().collection<T>(USERS_COLLECTION);
 }
 
 /**

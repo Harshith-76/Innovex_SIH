@@ -32,8 +32,10 @@ export const ProjectRoutePage: React.FC = () => {
     parcels,
     selectedParcelId,
     setSelectedParcelId,
-    navigateToParcelInGis
+    navigateToParcelInGis,
+    canPerform
   } = useApp();
+  const canEditRoute = canPerform('project_update');
 
   // Route Editing State
   const [waypoints, setWaypoints] = useState<[number, number][]>(
@@ -144,6 +146,7 @@ export const ProjectRoutePage: React.FC = () => {
   });
 
   const handleSaveRoute = () => {
+    if (!canEditRoute) return;
     updateProjectRoute(activeProject.id, {
       routeWaypoints: waypoints,
       proposedLengthKm: calculatedLengthKm,
@@ -277,13 +280,14 @@ export const ProjectRoutePage: React.FC = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <button
+            {canEditRoute && <button
               className={`gov-btn ${isDrawMode ? 'gov-btn-primary' : 'gov-btn-secondary'}`}
               style={{ backgroundColor: isDrawMode ? '#2563eb' : undefined }}
               onClick={() => setIsDrawMode(!isDrawMode)}
+              disabled={!canEditRoute}
             >
               <Route size={14} /> {isDrawMode ? 'FINISH DRAWING' : 'DRAW / EDIT ALIGNMENT'}
-            </button>
+            </button>}
 
             {isDrawMode && (
               <>
@@ -312,6 +316,7 @@ export const ProjectRoutePage: React.FC = () => {
                 style={{ width: '100px', fontSize: '12px' }}
                 value={rowWidthM}
                 onChange={(e) => setRowWidthM(Number(e.target.value))}
+                disabled={!canEditRoute}
               >
                 <option value={30}>30m ROW</option>
                 <option value={45}>45m ROW</option>
@@ -328,6 +333,7 @@ export const ProjectRoutePage: React.FC = () => {
                 style={{ width: '130px', fontSize: '12px' }}
                 value={routeStatus}
                 onChange={(e) => setRouteStatus(e.target.value as any)}
+                disabled={!canEditRoute}
               >
                 <option value="Draft">Draft</option>
                 <option value="Proposed">Proposed</option>
@@ -338,23 +344,24 @@ export const ProjectRoutePage: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button
+            {canEditRoute && <button
               className="gov-btn gov-btn-primary"
               style={{ backgroundColor: 'var(--gov-green-700)' }}
               onClick={handleSaveRoute}
+              disabled={!canEditRoute}
             >
               <Save size={14} /> SAVE ROUTE ALIGNMENT
-            </button>
+            </button>}
           </div>
         </div>
 
         {/* Leaflet Project Route Map */}
         <ProjectRouteMap
           waypoints={waypoints}
-          onWaypointsChange={setWaypoints}
+          onWaypointsChange={canEditRoute ? setWaypoints : () => {}}
           rowWidthM={rowWidthM}
-          isDrawMode={isDrawMode}
-          onToggleDrawMode={setIsDrawMode}
+          isDrawMode={canEditRoute && isDrawMode}
+          onToggleDrawMode={canEditRoute ? setIsDrawMode : () => {}}
           parcels={projectParcels.length > 0 ? projectParcels : parcels}
           selectedParcelId={selectedParcelId}
           onSelectParcel={setSelectedParcelId}

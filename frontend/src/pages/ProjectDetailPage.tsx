@@ -30,7 +30,8 @@ export const ProjectDetailPage: React.FC = () => {
     parcels,
     compensationRecords,
     affectedFamilies,
-    documents
+    documents,
+    canPerform
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'proposal' | 'timeline' | 'villages' | 'compensation' | 'rr' | 'documents'>('overview');
@@ -86,7 +87,7 @@ export const ProjectDetailPage: React.FC = () => {
             onClick={() => openProjectRoute(activeProject.id)}
             style={{ backgroundColor: 'var(--gov-blue-700)' }}
           >
-            <Route size={14} /> DRAW / EDIT ROUTE
+            <Route size={14} /> {canPerform('project_update') ? 'DRAW / EDIT ROUTE' : 'VIEW ROUTE'}
           </button>
           <button
             className="gov-btn gov-btn-secondary"
@@ -378,7 +379,7 @@ export const ProjectDetailPage: React.FC = () => {
               }}
               onClick={() => openProjectRoute(activeProject.id)}
             >
-              <Route size={16} /> DRAW / EDIT ROUTE ALIGNMENT
+              <Route size={16} /> {canPerform('project_update') ? 'DRAW / EDIT ROUTE ALIGNMENT' : 'VIEW ROUTE ALIGNMENT'}
             </button>
           </div>
 

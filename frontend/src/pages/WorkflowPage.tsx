@@ -50,8 +50,10 @@ export const WorkflowPage: React.FC = () => {
     activeProject,
     setCurrentPage,
     updateProjectVerification,
-    currentRole
+    currentRole,
+    canPerform
   } = useApp();
+  const canReviewProjects = canPerform('acquisition_review');
 
   const [activeTab, setActiveTab] = useState<'overview' | 'land-verification' | 'gis-impact' | 'documents' | 'decision'>('overview');
   const [reviewingProject, setReviewingProject] = useState<LandAcquisitionProject | null>(null);
@@ -174,6 +176,7 @@ export const WorkflowPage: React.FC = () => {
   ];
 
   const handleStartReview = (proj: LandAcquisitionProject) => {
+    if (!canReviewProjects) return;
     setReviewingProject(proj);
     setSelectedProjectId(proj.id);
     setActiveTab('overview');
@@ -205,6 +208,10 @@ export const WorkflowPage: React.FC = () => {
 
   const handleDecision = async (decisionType: 'RETURN' | 'REJECT' | 'APPROVE') => {
     if (!reviewingProject) return;
+    if (!canPerform('acquisition_review')) {
+      setDecisionFeedback('You do not have permission to make acquisition review decisions.');
+      return;
+    }
 
     if ((decisionType === 'RETURN' || decisionType === 'REJECT') && !officerRemarks.trim()) {
       alert('Please enter officer verification remarks explaining the reason for return/rejection.');
@@ -278,9 +285,9 @@ export const WorkflowPage: React.FC = () => {
             <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--gov-blue-700)', backgroundColor: 'var(--gov-blue-50)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--gov-blue-200)', textTransform: 'uppercase' }}>
               OFFICER VERIFICATION MODULE
             </span>
-            {currentRole !== 'Land Acquisition Officer' && (
+            {!canPerform('acquisition_review') && (
               <span style={{ fontSize: '11px', color: '#b45309', backgroundColor: '#fef3c7', padding: '2px 8px', borderRadius: '4px' }}>
-                Note: Currently viewing in {currentRole} demo mode. Switch role in top header for officer controls.
+                Read-only acquisition access for {currentRole.replace(/_/g, ' ')}.
               </span>
             )}
           </div>
@@ -401,13 +408,13 @@ export const WorkflowPage: React.FC = () => {
                   <th>Parcels</th>
                   <th>Submission Date</th>
                   <th>Status</th>
-                  <th style={{ textAlign: 'center' }}>Action</th>
+                  {canReviewProjects && <th style={{ textAlign: 'center' }}>Action</th>}
                 </tr>
               </thead>
               <tbody>
                 {pendingProjects.length === 0 ? (
                   <tr>
-                    <td colSpan={12} style={{ textAlign: 'center', padding: '30px', color: 'var(--gov-slate-500)' }}>
+                    <td colSpan={canReviewProjects ? 12 : 11} style={{ textAlign: 'center', padding: '30px', color: 'var(--gov-slate-500)' }}>
                       No submitted project proposals currently awaiting officer verification.
                     </td>
                   </tr>
@@ -443,7 +450,7 @@ export const WorkflowPage: React.FC = () => {
                         <td>
                           <StatusBadge status={proj.status} />
                         </td>
-                        <td style={{ textAlign: 'center' }}>
+                        {canReviewProjects && <td style={{ textAlign: 'center' }}>
                           <button
                             className="gov-btn gov-btn-primary gov-btn-sm"
                             style={{ fontSize: '11px', padding: '4px 10px' }}
@@ -452,7 +459,7 @@ export const WorkflowPage: React.FC = () => {
                             <Eye size={12} />
                             REVIEW PROJECT
                           </button>
-                        </td>
+                        </td>}
                       </tr>
                     );
                   })
@@ -1032,11 +1039,12 @@ export const WorkflowPage: React.FC = () => {
                   placeholder="Enter detailed verification findings, survey observations, or reasons for return/rejection..."
                   value={officerRemarks}
                   onChange={(e) => setOfficerRemarks(e.target.value)}
+                  disabled={!canPerform('acquisition_review')}
                 />
               </div>
 
               {/* Decision Action Buttons */}
-              <div className="gov-card" style={{ borderTop: '4px solid var(--gov-blue-700)' }}>
+              {canPerform('acquisition_review') ? <div className="gov-card" style={{ borderTop: '4px solid var(--gov-blue-700)' }}>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gov-navy-900)', marginBottom: '12px' }}>
                   OFFICER VERIFICATION DECISION
                 </div>
@@ -1085,7 +1093,11 @@ export const WorkflowPage: React.FC = () => {
                     ⚠️ APPROVE &amp; FORWARD will become enabled once all 8 mandatory checklist items are checked.
                   </div>
                 )}
-              </div>
+              </div> : (
+                <div className="gov-card" style={{ color: 'var(--gov-slate-600)' }}>
+                  Acquisition decisions are read-only for your role.
+                </div>
+              )}
             </div>
           )}
         </div>

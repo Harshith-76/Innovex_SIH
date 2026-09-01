@@ -3,14 +3,22 @@ import cors from 'cors';
 import parcelRoutes from './routes/parcelRoutes.js';
 import projectRoutes from './routes/projectRoutes.js';
 import hissaRoutes from './routes/hissaRoutes.js';
+import districtMonitoringRoutes from './routes/districtMonitoringRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 const app = express();
 
-// CORS configuration - allow local Vite frontend development origin
-const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+// CORS configuration - allow local Vite frontend development origins
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, server-to-server) or any localhost port
+      if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -21,9 +29,12 @@ app.use(
 app.use(express.json());
 
 // Mount API routes under /api
+app.use('/api', authRoutes);
 app.use('/api', parcelRoutes);
 app.use('/api', projectRoutes);
 app.use('/api', hissaRoutes);
+app.use('/api/district-monitoring', districtMonitoringRoutes);
+app.use('/api/district', districtMonitoringRoutes);
 
 // Root informational endpoint
 app.get('/', (_req: Request, res: Response) => {
@@ -39,6 +50,9 @@ app.get('/', (_req: Request, res: Response) => {
       projectById: '/api/projects/:id',
       hissa: '/api/hissa',
       hissaByParcel: '/api/hissa/parcel/:parcelId',
+      districtMonitoringProjects: '/api/district-monitoring/projects',
+      districtMonitoringStats: '/api/district-monitoring/stats',
+      districtMonitoringActivity: '/api/district-monitoring/activity',
     },
   });
 });
