@@ -30,7 +30,7 @@ export const Sidebar: React.FC = () => {
     { id: 'projects', label: 'Projects', icon: <FolderKanban size={17} /> },
     { id: 'gis-parcels', label: 'GIS & Land Parcels', icon: <MapPin size={17} /> },
     { id: 'compensation', label: 'Approved Projects', icon: <CheckCircle2 size={17} /> },
-    { id: 'affected-families', label: 'Affected Families & R&R', icon: <Users size={17} /> },
+    { id: 'affected-families', label: 'Landowner', icon: <Users size={17} /> },
     { id: 'documents', label: 'Documents', icon: <FileText size={17} /> },
     {
       id: 'alerts',

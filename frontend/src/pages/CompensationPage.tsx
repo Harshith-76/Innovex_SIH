@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { approveProject as approveProjectApi } from '../services/api';
+import { fetchApprovedProjectsLA, approveProject as approveProjectApi } from '../services/api';
 import { LandAcquisitionProject } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { LeafletGisMap } from '../components/gis/LeafletGisMap';
@@ -384,18 +384,67 @@ export const CompensationPage: React.FC = () => {
     searchQuery: globalSearch,
   } = useApp();
 
+  const [laProjects, setLaProjects] = useState<LandAcquisitionProject[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [localSearch, setLocalSearch] = useState<string>('');
-  
-  // Take all projects from the database collection (Project_Approval_LA) and show them
-  const approvedProjects = projects.filter((p) => !p.id.startsWith('proj-'));
+
+  useEffect(() => {
+    fetchApprovedProjectsLA()
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const mapped: LandAcquisitionProject[] = data.map((doc: any) => ({
+            id: doc.id || doc._id,
+            code: doc.code || doc.projectCode || `LA-APP-${(doc.id || doc._id)?.slice(-5)}`,
+            name: doc.name || doc.projectName || 'Approved Land Acquisition Project',
+            projectType: doc.projectType || 'Infrastructure',
+            parentAuthority: doc.parentAuthority || 'Govt of Karnataka',
+            agencyName: doc.agencyName || doc.implementingAgency || 'PIU',
+            agencyType: doc.agencyType || 'Authority',
+            department: doc.department || 'Revenue & Works',
+            implementingAgency: doc.implementingAgency || doc.agencyName || 'PIU',
+            state: doc.state || 'Karnataka',
+            district: doc.district || 'Bengaluru Rural',
+            taluks: Array.isArray(doc.taluks) ? doc.taluks : [doc.district || 'District Zone'],
+            villagesCount: doc.villagesCount || 1,
+            landRequiredAcres: doc.landRequiredAcres || doc.selectedLandAcres || 10,
+            landAcquiredAcres: doc.landAcquiredAcres || doc.selectedLandAcres || 8,
+            progressPercentage: doc.progressPercentage || 100,
+            currentStage: 'Approval',
+            status: doc.status || 'FORWARDED_TO_FINANCIAL_OFFICER',
+            riskScore: 10,
+            riskLevel: 'Low',
+            primaryRiskFactor: 'Approved by LAO',
+            expectedDelayDays: 0,
+            affectedFamiliesCount: doc.affectedFamiliesCount || 7,
+            displacedFamiliesCount: 0,
+            totalCompensationAssessedCr: doc.estimatedCompensationCr || 0,
+            totalCompensationPaidCr: 0,
+            lastUpdated: doc.updatedAt ? new Date(doc.updatedAt).toLocaleDateString('en-IN') : 'Just now',
+            description: doc.description || '',
+            stages: [],
+            villages: []
+          }));
+          setLaProjects(mapped);
+        }
+      })
+      .catch((err) => {
+        console.warn('[CompensationPage] Could not fetch Project_Approval_LA collection:', err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
+
+  // Show STRICTLY and ONLY projects from Project_Approval_LA collection in database
+  const approvedProjects = laProjects;
 
   const searchKeyword = (localSearch || globalSearch).toLowerCase().trim();
   const filteredProjects = approvedProjects.filter((p) => 
     !searchKeyword || p.name.toLowerCase().includes(searchKeyword) || p.code.toLowerCase().includes(searchKeyword)
   );
 
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const selectedProject = laProjects.find(p => p.id === selectedProjectId);
 
   if (selectedProject) {
     return <FinancialProjectDetails project={selectedProject} onBack={() => setSelectedProjectId(null)} />;
@@ -407,7 +456,7 @@ export const CompensationPage: React.FC = () => {
         <div>
           <h1 className="page-title">Approved Projects</h1>
           <p className="page-subtitle">
-            Projects approved by the Land Acquisition Officer and awaiting financial assessment.
+            Projects stored in the Project_Approval_LA database collection approved by the Land Acquisition Officer.
           </p>
         </div>
       </div>
@@ -418,63 +467,79 @@ export const CompensationPage: React.FC = () => {
           type="text"
           className="gov-input"
           style={{ width: '100%' }}
-          placeholder="Search projects..."
+          placeholder="Search approved projects..."
           value={localSearch}
           onChange={(e) => setLocalSearch(e.target.value)}
         />
       </div>
 
-      <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
-        {filteredProjects.map(proj => (
-          <div key={proj.id} className="gov-card" style={{ display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--gov-navy-900)', marginBottom: '8px' }}>
-              {proj.name}
-            </h3>
-            <div style={{ fontSize: '11px', color: 'var(--gov-slate-500)', marginBottom: '12px' }}>
-              Project ID: {proj.code}
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--gov-slate-600)' }}>Agency:</span>
-                <span style={{ fontWeight: 600 }}>{proj.agencyName || proj.implementingAgency}</span>
+      {isLoading ? (
+        <div className="gov-card" style={{ padding: '32px', textAlign: 'center', color: 'var(--gov-slate-500)' }}>
+          Loading projects from Project_Approval_LA collection...
+        </div>
+      ) : filteredProjects.length === 0 ? (
+        <div className="gov-card" style={{ padding: '40px', textAlign: 'center', backgroundColor: '#f8fafc' }}>
+          <Building2 size={32} color="var(--gov-slate-400)" style={{ marginBottom: '8px' }} />
+          <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--gov-navy-900)', marginBottom: '4px' }}>
+            No Projects in Project_Approval_LA Collection
+          </h3>
+          <p style={{ fontSize: '12px', color: 'var(--gov-slate-500)', margin: 0 }}>
+            Only projects saved in the <code>Project_Approval_LA</code> collection in the database are listed here.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+          {filteredProjects.map(proj => (
+            <div key={proj.id} className="gov-card" style={{ display: 'flex', flexDirection: 'column' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--gov-navy-900)', marginBottom: '8px' }}>
+                {proj.name}
+              </h3>
+              <div style={{ fontSize: '11px', color: 'var(--gov-slate-500)', marginBottom: '12px' }}>
+                Project ID: {proj.code}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--gov-slate-600)' }}>District:</span>
-                <span style={{ fontWeight: 600 }}>{proj.district}</span>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--gov-slate-600)' }}>Agency:</span>
+                  <span style={{ fontWeight: 600 }}>{proj.agencyName || proj.implementingAgency}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--gov-slate-600)' }}>District:</span>
+                  <span style={{ fontWeight: 600 }}>{proj.district}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--gov-slate-600)' }}>Taluk:</span>
+                  <span style={{ fontWeight: 600, textAlign: 'right' }}>{Array.isArray(proj.taluks) ? proj.taluks.join(', ') : proj.district}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--gov-slate-600)' }}>Required Land:</span>
+                  <span style={{ fontWeight: 600 }}>{proj.landRequiredAcres} acres</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--gov-slate-600)' }}>Affected Landowners:</span>
+                  <span style={{ fontWeight: 600 }}>{proj.affectedFamiliesCount || 7}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                  <span style={{ color: 'var(--gov-slate-600)' }}>LAO Status:</span>
+                  <span style={{ fontWeight: 700, color: 'var(--gov-green-700)' }}>Approved</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--gov-slate-600)' }}>Financial Status:</span>
+                  <span style={{ fontWeight: 700, color: (proj as any).financialStatus === 'Approved' ? 'var(--gov-green-700)' : 'var(--gov-amber-700)' }}>{(proj as any).financialStatus === 'Approved' ? 'Approved' : 'Pending'}</span>
+                </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--gov-slate-600)' }}>Taluk:</span>
-                <span style={{ fontWeight: 600, textAlign: 'right' }}>{proj.taluks.join(', ')}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--gov-slate-600)' }}>Required Land:</span>
-                <span style={{ fontWeight: 600 }}>{proj.landRequiredAcres} acres</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--gov-slate-600)' }}>Affected Landowners:</span>
-                <span style={{ fontWeight: 600 }}>{proj.affectedFamiliesCount || 7}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                <span style={{ color: 'var(--gov-slate-600)' }}>LAO Status:</span>
-                <span style={{ fontWeight: 700, color: 'var(--gov-green-700)' }}>Approved</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--gov-slate-600)' }}>Financial Status:</span>
-                <span style={{ fontWeight: 700, color: (proj as any).financialStatus === 'Approved' ? 'var(--gov-green-700)' : 'var(--gov-amber-700)' }}>{(proj as any).financialStatus === 'Approved' ? 'Approved' : 'Pending'}</span>
-              </div>
-            </div>
 
-            <button 
-              className="gov-btn gov-btn-primary" 
-              style={{ marginTop: '16px', width: '100%', justifyContent: 'center' }}
-              onClick={() => setSelectedProjectId(proj.id)}
-            >
-              View Project
-            </button>
-          </div>
-        ))}
-      </div>
+              <button 
+                className="gov-btn gov-btn-primary" 
+                style={{ marginTop: '16px', width: '100%', justifyContent: 'center' }}
+                onClick={() => setSelectedProjectId(proj.id)}
+              >
+                View Project
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
