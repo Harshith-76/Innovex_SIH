@@ -14,7 +14,6 @@ import { NotificationDrawer } from '../common/NotificationDrawer';
 import { ROLE_LABELS } from '../../auth/rbac';
 
 const PAGE_NAMES: Record<PageId, string> = {
-  dashboard: 'National / State Dashboard',
   'district-dashboard': 'District Monitoring',
   'district-monitoring': 'District Monitoring',
   projects: 'Land Acquisition Projects',
@@ -61,7 +60,7 @@ export const TopHeader: React.FC = () => {
       {/* Breadcrumbs & Title */}
       <div className="header-left">
         <div className="breadcrumbs">
-          <span className="breadcrumb-item" onClick={() => setCurrentPage('dashboard')}>
+          <span className="breadcrumb-item">
             LAMS Portal
           </span>
           <ChevronRight size={12} className="breadcrumb-separator" />

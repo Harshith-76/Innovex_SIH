@@ -15,7 +15,6 @@ export type Permission =
   | 'gis_land_parcels'
   | 'approved_projects'
   | 'district_monitoring'
-  | 'dashboard'
   | 'affected_families'
   | 'documents'
   | 'alerts'

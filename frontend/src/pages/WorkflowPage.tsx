@@ -53,6 +53,7 @@ export const WorkflowPage: React.FC = () => {
     currentRole,
     canPerform
   } = useApp();
+  const canReviewProjects = canPerform('acquisition_review');
 
   const [activeTab, setActiveTab] = useState<'overview' | 'land-verification' | 'gis-impact' | 'documents' | 'decision'>('overview');
   const [reviewingProject, setReviewingProject] = useState<LandAcquisitionProject | null>(null);
@@ -175,6 +176,7 @@ export const WorkflowPage: React.FC = () => {
   ];
 
   const handleStartReview = (proj: LandAcquisitionProject) => {
+    if (!canReviewProjects) return;
     setReviewingProject(proj);
     setSelectedProjectId(proj.id);
     setActiveTab('overview');
@@ -406,13 +408,13 @@ export const WorkflowPage: React.FC = () => {
                   <th>Parcels</th>
                   <th>Submission Date</th>
                   <th>Status</th>
-                  <th style={{ textAlign: 'center' }}>Action</th>
+                  {canReviewProjects && <th style={{ textAlign: 'center' }}>Action</th>}
                 </tr>
               </thead>
               <tbody>
                 {pendingProjects.length === 0 ? (
                   <tr>
-                    <td colSpan={12} style={{ textAlign: 'center', padding: '30px', color: 'var(--gov-slate-500)' }}>
+                    <td colSpan={canReviewProjects ? 12 : 11} style={{ textAlign: 'center', padding: '30px', color: 'var(--gov-slate-500)' }}>
                       No submitted project proposals currently awaiting officer verification.
                     </td>
                   </tr>
@@ -448,7 +450,7 @@ export const WorkflowPage: React.FC = () => {
                         <td>
                           <StatusBadge status={proj.status} />
                         </td>
-                        <td style={{ textAlign: 'center' }}>
+                        {canReviewProjects && <td style={{ textAlign: 'center' }}>
                           <button
                             className="gov-btn gov-btn-primary gov-btn-sm"
                             style={{ fontSize: '11px', padding: '4px 10px' }}
@@ -457,7 +459,7 @@ export const WorkflowPage: React.FC = () => {
                             <Eye size={12} />
                             REVIEW PROJECT
                           </button>
-                        </td>
+                        </td>}
                       </tr>
                     );
                   })
