@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, FolderKanban, MapPin, GitBranch, Users, FileText, BellRing, BarChart3, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { FolderKanban, MapPin, GitBranch, Users, FileText, BellRing, BarChart3, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { useApp, type PageId } from '../../context/AppContext';
 import { ROLE_LABELS } from '../../auth/rbac';
 
@@ -13,7 +13,6 @@ interface NavMenuItem {
 export const Sidebar: React.FC = () => {
   const { currentPage, setCurrentPage, unreadAlertsCount, currentRole, currentUser, canAccess } = useApp();
   const allNavItems: NavMenuItem[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={17} /> },
     { id: 'workflow', label: 'Acquisition Window', icon: <GitBranch size={17} /> },
     { id: 'projects', label: 'Projects Directory', icon: <FolderKanban size={17} /> },
     { id: 'gis-parcels', label: 'GIS & Land Parcels', icon: <MapPin size={17} /> },

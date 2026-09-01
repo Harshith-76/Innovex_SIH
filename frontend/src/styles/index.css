@@ -1033,24 +1033,43 @@ html, body, #root {
   font-weight: 600;
 }
 
-/* Dashboard Mid Grid: GIS Preview & Alerts */
-.dashboard-mid-grid {
-  display: grid;
-  grid-template-columns: 1.55fr 1fr;
-  gap: 16px;
-}
-
-.gis-preview-card,
-.alerts-preview-card {
+/* Dashboard focus sections: full-width GIS preview followed by project matrix */
+.dashboard-main-grid {
   display: flex;
   flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
 }
 
-.gis-preview-map-box {
-  height: 320px;
+.dashboard-gis-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+.dashboard-gis-map-box {
+  height: clamp(320px, 42vw, 500px);
+  min-height: 320px;
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--gov-slate-200);
+}
+
+.dashboard-matrix-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+.dashboard-matrix-table-box {
+  overflow-x: auto;
+  overflow-y: visible;
+  max-width: 100%;
+  border: 1px solid var(--gov-slate-200);
+  border-radius: var(--radius-sm);
 }
 
 .gis-preview-footer {

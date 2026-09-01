@@ -19,7 +19,6 @@ export type Permission =
   | 'gis_land_parcels'
   | 'approved_projects'
   | 'district_monitoring'
-  | 'dashboard'
   | 'affected_families'
   | 'documents'
   | 'alerts'
@@ -31,7 +30,6 @@ export type Permission =
   | 'district_review';
 
 export type PageId =
-  | 'dashboard'
   | 'district-dashboard'
   | 'projects'
   | 'project-detail'
@@ -57,7 +55,6 @@ const ROLE_PERMISSIONS: Record<AuthRole, readonly Permission[] | '*'> = {
 };
 
 export const PAGE_PERMISSIONS: Partial<Record<PageId, Permission>> = {
-  dashboard: 'dashboard',
   'district-dashboard': 'district_monitoring',
   'district-monitoring': 'district_monitoring',
   analytics: 'district_monitoring',
@@ -74,7 +71,6 @@ export const PAGE_PERMISSIONS: Partial<Record<PageId, Permission>> = {
 };
 
 export const PAGE_PATHS: Record<PageId, string> = {
-  dashboard: '/dashboard',
   'district-dashboard': '/district-monitoring',
   'district-monitoring': '/district-monitoring',
   analytics: '/district-monitoring',
@@ -92,7 +88,6 @@ export const PAGE_PATHS: Record<PageId, string> = {
 };
 
 const PATH_PAGES: Record<string, PageId> = {
-  '/dashboard': 'dashboard',
   '/acquisition-window': 'workflow',
   '/projects': 'projects',
   '/projects/detail': 'project-detail',
@@ -134,6 +129,6 @@ export function pageFromPath(pathname: string): PageId | undefined {
 }
 
 export function firstAuthorizedPage(role: AuthRole): PageId {
-  const preferred: PageId[] = ['dashboard', 'workflow', 'projects', 'compensation', 'gis-parcels', 'district-monitoring'];
+  const preferred: PageId[] = ['workflow', 'projects', 'compensation', 'gis-parcels', 'district-monitoring'];
   return preferred.find((page) => canAccessPage(role, page)) || 'access-denied';
 }

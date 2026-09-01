@@ -5,7 +5,6 @@ import { TopHeader } from './components/layout/TopHeader';
 import { LoginPage } from './pages/LoginPage';
 
 // Pages
-import { DashboardPage } from './pages/DashboardPage';
 import { DistrictDashboardPage } from './pages/DistrictDashboardPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
@@ -23,8 +22,6 @@ const MainContent: React.FC = () => {
 
   const renderCurrentPage = () => {
     switch (currentPage) {
-      case 'dashboard':
-        return <DashboardPage />;
       case 'district-dashboard':
       case 'district-monitoring':
       case 'analytics':
@@ -62,7 +59,7 @@ const MainContent: React.FC = () => {
                   className="gov-btn gov-btn-primary"
                   style={{ marginTop: 20 }}
                   onClick={() => {
-                    const fallback = (['dashboard', 'workflow', 'projects', 'compensation', 'gis-parcels', 'district-monitoring'] as const)
+                    const fallback = (['workflow', 'projects', 'compensation', 'gis-parcels', 'district-monitoring'] as const)
                       .find((page) => canAccess(page));
                     if (fallback) setCurrentPage(fallback);
                   }}
@@ -107,4 +104,3 @@ export const App: React.FC = () => (
 );
 
 export default App;
-
